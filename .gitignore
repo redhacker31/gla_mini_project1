@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+.venv/
+venv/
+ENV/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment variables & secrets
+.env
+!.env.example
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
+# ML artifacts & datasets
+*.joblib
+*.pkl
+*.csv
+*.parquet
+!ml/artifacts/.gitkeep
+!ml/notebooks/.gitkeep
+
+# Node / React
+node_modules/
+dist/
+.DS_Store
+*.log
+npm-debug.log*
+
+# IDE
+.vscode/
+.idea/
+
+
+*.xlsx

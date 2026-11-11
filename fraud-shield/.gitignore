@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+ENV/
+
+# Environment variables
+.env
+!.env.example
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
+# ML artifacts & datasets (large data)
+ml/artifacts/*.joblib
+ml/artifacts/*.pkl
+*.csv
+*.parquet
+!ml/artifacts/.gitkeep
+!ml/notebooks/.gitkeep
+
+# Node / React
+node_modules/
+dist/
+.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.vscode/
+.idea/
+
