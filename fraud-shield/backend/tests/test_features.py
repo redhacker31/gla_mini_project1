@@ -183,3 +183,4 @@ def test_feature_extraction_latency_budget(feature_service):
     # Requirement from synopsis: Feature vector generated in < 10ms
     assert p95_latency < 10.0, f"p95 latency {p95_latency:.3f}ms exceeded 10ms budget"
     assert mean_latency < 2.0, f"Mean latency {mean_latency:.3f}ms too high"
+

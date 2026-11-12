@@ -136,3 +136,4 @@ class BatchFeaturePipeline(BaseEstimator, TransformerMixin):
 
         feature_df = pd.DataFrame(features, columns=FEATURE_NAMES)
         return feature_df
+
