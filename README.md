@@ -24,7 +24,9 @@ This repository contains the source code, machine learning pipelines, and docume
 - [x] **Phase 1:** Project Scaffolding, Backend FastAPI Ingestion Gateway & Frontend React Vite Foundation
 - [x] **Phase 2:** Dataset Acquisition, Benchmark Schemas (PaySim & ULB), UPI Synthesizer & Class Imbalance EDA
 - [x] **Phase 3:** Data Cleaning, Sliding-Window Feature Engineering Pipeline & Shannon Entropy
-- [ ] **Phase 4:** Isolation Forest Anomaly Detection Model Training & Serialization
+- [x] **Phase 4:** Isolation Forest Anomaly Detection Model Training, Normalization & Latency Profiling
+- [ ] **Phase 5:** Composite Risk Engine (Sigmoid Fusion, Deterministic Rules & 3-Tier Classification)
+
 
 
 

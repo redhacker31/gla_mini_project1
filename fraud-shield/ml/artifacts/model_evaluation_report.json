@@ -1,0 +1,27 @@
+{
+  "model_algorithm": "IsolationForest",
+  "test_dataset": {
+    "total_records": 6000,
+    "fraud_records": 36,
+    "legit_records": 5964,
+    "fraud_ratio": 0.006
+  },
+  "metrics": {
+    "pr_auc": 0.8119,
+    "roc_auc": 0.9826,
+    "recall_at_1pct_fpr": 0.8056,
+    "threshold_at_1pct_fpr": 0.5065,
+    "max_f1": 0.8358,
+    "optimal_threshold": 0.5078,
+    "precision_at_optimal": 0.9032,
+    "recall_at_optimal": 0.7778
+  },
+  "latency_ms": {
+    "p50": 8.542,
+    "p95": 11.644,
+    "p99": 13.211,
+    "mean": 8.867,
+    "target_sla": "<= 20.0 ms",
+    "sla_met": true
+  }
+}

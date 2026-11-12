@@ -1,0 +1,23 @@
+{
+  "algorithm": "IsolationForest",
+  "n_estimators": 100,
+  "max_samples": 256,
+  "contamination": 0.002,
+  "features": [
+    "amount",
+    "txn_count_5m",
+    "txn_count_1h",
+    "txn_count_24h",
+    "amount_sum_5m",
+    "amount_sum_1h",
+    "delta_t_seconds",
+    "recipient_entropy_1h",
+    "amount_deviation_ratio"
+  ],
+  "train_samples": 14000,
+  "test_samples": 6000,
+  "train_fraud_count": 0,
+  "test_fraud_count": 36,
+  "artifact_path": "ml/artifacts/isolation_forest_pipeline.joblib",
+  "held_out_test_path": "ml/artifacts/held_out_test_set.csv"
+}
