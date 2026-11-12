@@ -95,3 +95,4 @@ def test_dataset_inspector_metrics(upi_synthesizer):
     assert report.imbalance.legit_records == (500 - df["is_fraud"].sum())
     assert report.feature_availability["has_velocity_support"] is True
     assert report.feature_availability["has_recipient_entropy_support"] is True
+

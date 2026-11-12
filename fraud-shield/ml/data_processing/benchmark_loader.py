@@ -166,3 +166,4 @@ class BenchmarkLoader:
         df = pd.DataFrame(data).sample(frac=1.0, random_state=random_state).reset_index(drop=True)
         df.to_csv(ulb_path, index=False)
         return df
+

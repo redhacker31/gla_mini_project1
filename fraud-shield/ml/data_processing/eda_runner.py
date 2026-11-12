@@ -178,3 +178,4 @@ def run_full_eda(output_dir: str = "ml/artifacts") -> dict:
 
 if __name__ == "__main__":
     run_full_eda()
+
