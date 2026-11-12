@@ -1,0 +1,251 @@
+{
+  "paysim": {
+    "dataset_name": "PaySim Mobile Money",
+    "num_rows": 10000,
+    "num_columns": 11,
+    "column_types": {
+      "step": "int64",
+      "type": "str",
+      "amount": "float64",
+      "nameOrig": "str",
+      "oldbalanceOrg": "float64",
+      "newbalanceOrig": "float64",
+      "nameDest": "str",
+      "oldbalanceDest": "float64",
+      "newbalanceDest": "float64",
+      "isFraud": "int64",
+      "isFlaggedFraud": "int64"
+    },
+    "missing_values": {
+      "step": 0,
+      "type": 0,
+      "amount": 0,
+      "nameOrig": 0,
+      "oldbalanceOrg": 0,
+      "newbalanceOrig": 0,
+      "nameDest": 0,
+      "oldbalanceDest": 0,
+      "newbalanceDest": 0,
+      "isFraud": 0,
+      "isFlaggedFraud": 0
+    },
+    "has_nulls": false,
+    "imbalance": {
+      "total_records": 10000,
+      "legit_records": 9985,
+      "fraud_records": 15,
+      "fraud_percentage": 0.15,
+      "imbalance_ratio": "1 : 665.7"
+    },
+    "legit_amount_stats": {
+      "mean": 10328.44,
+      "std": 16444.54,
+      "median": 5074.94,
+      "p95": 37200.98,
+      "p99": 78764.99,
+      "min_val": 57.97,
+      "max_val": 350682.08,
+      "skewness": 5.5
+    },
+    "fraud_amount_stats": {
+      "mean": 80024.97,
+      "std": 53949.47,
+      "median": 71395.44,
+      "p95": 186177.57,
+      "p99": 215140.12,
+      "min_val": 13830.85,
+      "max_val": 222380.76,
+      "skewness": 1.6
+    },
+    "feature_availability": {
+      "has_amount": true,
+      "has_temporal_time": true,
+      "has_user_identity": true,
+      "has_recipient_identity": true,
+      "has_velocity_support": true,
+      "has_recipient_entropy_support": true
+    },
+    "limitations": [
+      "Coarse 1-hour time step ('step') prevents sub-minute velocity tracking.",
+      "Lacks UPI Virtual Payment Address (VPA) structure.",
+      "Contains large cross-border business amounts unrepresentative of Indian rural micro-commerce."
+    ]
+  },
+  "ulb": {
+    "dataset_name": "ULB Credit Card",
+    "num_rows": 10000,
+    "num_columns": 31,
+    "column_types": {
+      "Time": "float64",
+      "V1": "float64",
+      "V2": "float64",
+      "V3": "float64",
+      "V4": "float64",
+      "V5": "float64",
+      "V6": "float64",
+      "V7": "float64",
+      "V8": "float64",
+      "V9": "float64",
+      "V10": "float64",
+      "V11": "float64",
+      "V12": "float64",
+      "V13": "float64",
+      "V14": "float64",
+      "V15": "float64",
+      "V16": "float64",
+      "V17": "float64",
+      "V18": "float64",
+      "V19": "float64",
+      "V20": "float64",
+      "V21": "float64",
+      "V22": "float64",
+      "V23": "float64",
+      "V24": "float64",
+      "V25": "float64",
+      "V26": "float64",
+      "V27": "float64",
+      "V28": "float64",
+      "Amount": "float64",
+      "Class": "int64"
+    },
+    "missing_values": {
+      "Time": 0,
+      "V1": 0,
+      "V2": 0,
+      "V3": 0,
+      "V4": 0,
+      "V5": 0,
+      "V6": 0,
+      "V7": 0,
+      "V8": 0,
+      "V9": 0,
+      "V10": 0,
+      "V11": 0,
+      "V12": 0,
+      "V13": 0,
+      "V14": 0,
+      "V15": 0,
+      "V16": 0,
+      "V17": 0,
+      "V18": 0,
+      "V19": 0,
+      "V20": 0,
+      "V21": 0,
+      "V22": 0,
+      "V23": 0,
+      "V24": 0,
+      "V25": 0,
+      "V26": 0,
+      "V27": 0,
+      "V28": 0,
+      "Amount": 0,
+      "Class": 0
+    },
+    "has_nulls": false,
+    "imbalance": {
+      "total_records": 10000,
+      "legit_records": 9983,
+      "fraud_records": 17,
+      "fraud_percentage": 0.17,
+      "imbalance_ratio": "1 : 587.2"
+    },
+    "legit_amount_stats": {
+      "mean": 46.8,
+      "std": 128.6,
+      "median": 19.5,
+      "p95": 169.52,
+      "p99": 381.08,
+      "min_val": 0.17,
+      "max_val": 8733.64,
+      "skewness": 35.2
+    },
+    "fraud_amount_stats": {
+      "mean": 210.56,
+      "std": 313.13,
+      "median": 61.68,
+      "p95": 906.66,
+      "p99": 910.31,
+      "min_val": 2.54,
+      "max_val": 911.22,
+      "skewness": 1.62
+    },
+    "feature_availability": {
+      "has_amount": true,
+      "has_temporal_time": true,
+      "has_user_identity": false,
+      "has_recipient_identity": false,
+      "has_velocity_support": false,
+      "has_recipient_entropy_support": false
+    },
+    "limitations": [
+      "Features V1-V28 are PCA-anonymized; cannot infer user behavioral intent.",
+      "No user or recipient IDs available; impossible to compute sliding-window velocity or recipient entropy.",
+      "Static credit card transaction records rather than streaming mobile wallet micro-payments."
+    ]
+  },
+  "upi_micro": {
+    "dataset_name": "Indian UPI Micro-Transactions",
+    "num_rows": 15000,
+    "num_columns": 8,
+    "column_types": {
+      "txn_id": "str",
+      "user_id": "str",
+      "amount": "float64",
+      "timestamp": "str",
+      "recipient_vpa": "str",
+      "channel": "str",
+      "is_fraud": "int64",
+      "fraud_type": "str"
+    },
+    "missing_values": {
+      "txn_id": 0,
+      "user_id": 0,
+      "amount": 0,
+      "timestamp": 0,
+      "recipient_vpa": 0,
+      "channel": 0,
+      "is_fraud": 0,
+      "fraud_type": 0
+    },
+    "has_nulls": false,
+    "imbalance": {
+      "total_records": 15000,
+      "legit_records": 14973,
+      "fraud_records": 27,
+      "fraud_percentage": 0.18,
+      "imbalance_ratio": "1 : 554.6"
+    },
+    "legit_amount_stats": {
+      "mean": 215.46,
+      "std": 92.65,
+      "median": 216.2,
+      "p95": 364.05,
+      "p99": 415.18,
+      "min_val": 10.0,
+      "max_val": 531.1,
+      "skewness": 0.05
+    },
+    "fraud_amount_stats": {
+      "mean": 391.92,
+      "std": 70.89,
+      "median": 402.23,
+      "p95": 480.35,
+      "p99": 486.95,
+      "min_val": 264.24,
+      "max_val": 489.21,
+      "skewness": -0.34
+    },
+    "feature_availability": {
+      "has_amount": true,
+      "has_temporal_time": true,
+      "has_user_identity": true,
+      "has_recipient_identity": true,
+      "has_velocity_support": true,
+      "has_recipient_entropy_support": true
+    },
+    "limitations": [
+      "Synthetically generated due to strict banking privacy regulations (RBI / DPDP Act).",
+      "Models rural micro-transactions specifically (< INR 1,000); not generalized to corporate wire transfers."
+    ]
+  }
+}

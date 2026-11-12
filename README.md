@@ -20,9 +20,9 @@ This repository contains the source code, machine learning pipelines, and docume
 
 ---
 
-### Phase 1 Status
-- [x] Project Scaffolding & Directory Structure
-- [x] Backend FastAPI Ingestion Gateway & Health Check Endpoint (`/api/v1/health`)
-- [x] Frontend React Vite Scaffolding with Responsive UI
-- [x] Configurable Risk Thresholds (`0.45` Low, `0.80` High)
-- [x] Full Pytest & Build Verification
+### Phase Status
+- [x] **Phase 1:** Project Scaffolding, Backend FastAPI Ingestion Gateway & Frontend React Vite Foundation
+- [x] **Phase 2:** Dataset Acquisition, Benchmark Schemas (PaySim & ULB), UPI Synthesizer & Class Imbalance EDA
+- [ ] **Phase 3:** Data Cleaning & Sliding-Window Feature Engineering Pipeline
+
+
