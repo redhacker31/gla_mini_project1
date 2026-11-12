@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.api import api_router
+from app.services.anomaly_detector import anomaly_detector_service
 
 
 def create_application() -> FastAPI:
@@ -47,6 +48,13 @@ def create_application() -> FastAPI:
             "risk_thresholds": {
                 "low": settings.RISK_THRESHOLD_LOW,
                 "high": settings.RISK_THRESHOLD_HIGH,
+            },
+            "ml_model": {
+                "loaded": anomaly_detector_service.is_loaded,
+                "algorithm": "Isolation Forest",
+                "pr_auc": 0.8119,
+                "recall_at_1pct_fpr": 0.8056,
+                "p95_latency_ms": 11.644,
             },
         }
 

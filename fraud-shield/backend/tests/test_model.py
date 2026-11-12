@@ -101,3 +101,4 @@ def test_heuristic_fallback_service():
     score = service.predict_anomaly_score(sample)
     assert 0.0 <= score <= 1.0
     assert score >= 0.60  # Fallback correctly detects burst indicators
+
