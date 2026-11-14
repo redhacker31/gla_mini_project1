@@ -26,6 +26,16 @@ class TransactionEvaluateRequest(BaseModel):
         description="Destination Virtual Payment Address (e.g. merchant@upi or user@okhdfcbank)",
         examples=["kirana_store@paytm"]
     )
+    recipient_id: Optional[str] = Field(
+        default=None,
+        description="Optional recipient account or merchant identifier",
+        examples=["rcp_merchant_01"]
+    )
+    merchant_category: str = Field(
+        default="miscellaneous",
+        description="Merchant business category (e.g. grocery, food, recharge, p2p, shopping)",
+        examples=["grocery"]
+    )
     timestamp: Optional[datetime] = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="Transaction initiation timestamp (ISO-8601 UTC). Defaults to server current time.",
@@ -141,3 +151,4 @@ class TransactionDetail(BaseModel):
     challenge_required: bool
     explanation: str
     latency_ms: float
+

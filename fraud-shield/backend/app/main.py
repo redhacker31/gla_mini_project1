@@ -3,11 +3,21 @@
 Real-Time Anomaly Detection for Digital Micro-Transactions.
 B.Tech AIML Capstone Project.
 """
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.api import api_router
+from app.database import init_db
 from app.services.anomaly_detector import anomaly_detector_service
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan context manager for startup and shutdown routines."""
+    # Initialize SQLite database schema
+    init_db()
+    yield
 
 
 def create_application() -> FastAPI:
@@ -21,6 +31,7 @@ def create_application() -> FastAPI:
         ),
         docs_url="/docs",
         redoc_url="/redoc",
+        lifespan=lifespan,
     )
 
     # Configure CORS middleware
@@ -56,6 +67,11 @@ def create_application() -> FastAPI:
                 "recall_at_1pct_fpr": 0.8056,
                 "p95_latency_ms": 11.644,
             },
+            "database": {
+                "configured": True,
+                "engine": "SQLite (WAL Mode)",
+                "audit_logging": "Append-Only Cryptographic Hash Chain",
+            },
         }
 
     # Root welcome route
@@ -79,4 +95,3 @@ app = create_application()
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)
-

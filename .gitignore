@@ -21,6 +21,9 @@ htmlcov/
 *.sqlite
 *.sqlite3
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
 
 # ML artifacts & datasets
 *.joblib
