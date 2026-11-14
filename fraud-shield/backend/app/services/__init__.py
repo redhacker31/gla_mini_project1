@@ -2,8 +2,8 @@
 from app.services.feature_engineering import feature_service, FeatureEngineeringService
 from app.services.anomaly_detector import anomaly_detector_service, AnomalyDetectorService
 from app.services.risk_engine import risk_engine_service, RiskEngineService, EvaluationDecision, RuleResult
+from app.services.transaction_service import transaction_service, TransactionService
 from app.services.otp_service import OTPService
-from app.services.transaction_service import TransactionService
 
 __all__ = [
     "feature_service",
@@ -14,6 +14,7 @@ __all__ = [
     "RiskEngineService",
     "EvaluationDecision",
     "RuleResult",
-    "OTPService",
+    "transaction_service",
     "TransactionService",
+    "OTPService",
 ]

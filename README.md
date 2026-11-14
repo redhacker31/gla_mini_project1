@@ -26,7 +26,16 @@ This repository contains the source code, machine learning pipelines, and docume
 - [x] **Phase 3:** Data Cleaning, Sliding-Window Feature Engineering Pipeline & Shannon Entropy
 - [x] **Phase 4:** Isolation Forest Anomaly Detection Model Training, Normalization & Latency Profiling
 - [x] **Phase 5:** Composite Risk Engine (Sigmoid Fusion, Deterministic Domain Rules & 3-Tier Classification)
-- [ ] **Phase 6:** Transaction Evaluation API Endpoints & Request/Response Schemas
+- [x] **Phase 6:** Transaction Evaluation API Endpoints, Pydantic v2 Contracts & Orchestration Service
+- [ ] **Phase 7:** SQLite & SQLAlchemy Persistence, State Management & Append-Only Audit Logging
+- [ ] **Phase 8:** Adaptive OTP Step-Up Authentication Service & Challenge Lifecycle
+- [ ] **Phase 9:** Real-Time Transaction Generator & Adversarial Attack Simulation Service
+- [ ] **Phase 10:** Interactive React Analyst Dashboard & Live Threat Telemetry
+- [ ] **Phase 11:** Fraud Scenario Simulator & Rule/ML Explainability Visualizations
+- [ ] **Phase 12:** Rigorous Performance Benchmarking & Sub-50ms Concurrency Profiling
+- [ ] **Phase 13:** Security Hardening, Rate Limiting & Input Sanitization
+- [ ] **Phase 14:** Production Containerization & Multi-Service Orchestration (Docker)
+- [ ] **Phase 15:** Capstone Documentation, Demonstration Script & Final Report
 
 
 
