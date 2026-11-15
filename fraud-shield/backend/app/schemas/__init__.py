@@ -1,9 +1,16 @@
-"""Pydantic request and response schemas."""
+"""Schemas package exports."""
+from app.schemas.authentication import (
+    OTPResendRequest,
+    OTPResendResponse,
+    OTPSessionStatusResponse,
+    OTPVerifyRequest,
+    OTPVerifyResponse,
+)
 from app.schemas.transaction import (
+    RuleTriggerInfo,
+    TransactionDetail,
     TransactionEvaluateRequest,
     TransactionEvaluateResponse,
-    TransactionDetail,
-    RuleTriggerInfo,
 )
 
 __all__ = [
@@ -11,4 +18,9 @@ __all__ = [
     "TransactionEvaluateResponse",
     "TransactionDetail",
     "RuleTriggerInfo",
+    "OTPVerifyRequest",
+    "OTPVerifyResponse",
+    "OTPResendRequest",
+    "OTPResendResponse",
+    "OTPSessionStatusResponse",
 ]

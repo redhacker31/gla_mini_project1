@@ -32,6 +32,8 @@ class OTPSession(Base):
     otp_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     max_attempts: Mapped[int] = mapped_column(Integer, default=3)
+    resends_used: Mapped[int] = mapped_column(Integer, default=0)
+    phone_masked: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     status: Mapped[str] = mapped_column(
         String(20),
         default="ACTIVE",

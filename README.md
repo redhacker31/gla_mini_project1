@@ -28,7 +28,7 @@ This repository contains the source code, machine learning pipelines, and docume
 - [x] **Phase 5:** Composite Risk Engine (Sigmoid Fusion, Deterministic Domain Rules & 3-Tier Classification)
 - [x] **Phase 6:** Transaction Evaluation API Endpoints, Pydantic v2 Contracts & Orchestration Service
 - [x] **Phase 7:** SQLite & SQLAlchemy 2.0 Persistence, Pseudonymization & Append-Only Audit Ledger
-- [ ] **Phase 8:** Adaptive OTP Step-Up Authentication Service & Challenge Lifecycle
+- [x] **Phase 8:** Adaptive OTP Step-Up Authentication Service & Challenge Lifecycle
 - [ ] **Phase 9:** Real-Time Transaction Generator & Adversarial Attack Simulation Service
 - [ ] **Phase 10:** Interactive React Analyst Dashboard & Live Threat Telemetry
 - [ ] **Phase 11:** Fraud Scenario Simulator & Rule/ML Explainability Visualizations

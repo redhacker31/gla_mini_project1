@@ -221,6 +221,19 @@ class TransactionService:
                 },
                 timestamp=response.timestamp,
             )
+
+            # 5. Initialize Step-Up OTP challenge if Medium-Risk tier requires verification
+            if response.status == "PENDING_VERIFICATION" and response.session_id:
+                from app.services.otp_service import otp_service
+                otp_service.create_challenge(
+                    db=session,
+                    txn_id=response.txn_id,
+                    user_hash=user_hash,
+                    amount=response.amount,
+                    recipient_vpa=response.recipient_vpa,
+                    custom_session_id=response.session_id,
+                )
+
             session.commit()
 
         try:

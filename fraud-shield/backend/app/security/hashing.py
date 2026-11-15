@@ -8,6 +8,7 @@ Adheres to DPDP Act 2023 guidelines:
 from datetime import datetime, timezone
 import hashlib
 import hmac
+import secrets
 from typing import Optional
 
 from app.config import settings
@@ -80,3 +81,16 @@ def hash_otp(otp: str, salt: Optional[str] = None) -> str:
     effective_salt = salt or settings.HMAC_SECRET_KEY
     payload = f"{effective_salt}:{otp}".encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
+
+
+def generate_csprng_otp(length: int = 6) -> str:
+    """Generate a cryptographically secure numeric OTP using Python secrets."""
+    low = 10 ** (length - 1)
+    high = 10 ** length
+    return str(secrets.randbelow(high - low) + low)
+
+
+def verify_otp_hash(candidate_otp: str, stored_hash: str, salt: Optional[str] = None) -> bool:
+    """Constant-time verification of candidate OTP against stored SHA-256 digest."""
+    candidate_hash = hash_otp(candidate_otp, salt=salt)
+    return hmac.compare_digest(candidate_hash, stored_hash)
