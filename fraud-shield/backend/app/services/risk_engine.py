@@ -106,7 +106,7 @@ class RiskEngineService:
             ))
 
         # Rule 2: Rapid-Fire Execution (< 15 seconds between transactions)
-        if 0.0 < delta_t < 15.0:
+        if 0.0 <= delta_t < 15.0:
             results.append(RuleResult(
                 rule_id="RULE_RAPID_FIRE",
                 rule_name="Sub-15s Rapid Execution",

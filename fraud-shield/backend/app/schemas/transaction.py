@@ -149,6 +149,8 @@ class TransactionDetail(BaseModel):
     composite_score: float
     ml_score: float
     challenge_required: bool
+    session_id: Optional[str] = None
+    triggered_rules: List[RuleTriggerInfo] = Field(default_factory=list)
     explanation: str
     latency_ms: float
 
