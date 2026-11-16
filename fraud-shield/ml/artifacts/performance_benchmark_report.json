@@ -1,0 +1,80 @@
+{
+  "timestamp": "2026-11-16T09:13:22.104438+00:00",
+  "environment": "Commodity x86_64 CPU (Local SQLite WAL Mode)",
+  "overall_p95_latency_ms": 12.187,
+  "overall_mean_latency_ms": 9.037,
+  "sla_target_ms": 50.0,
+  "sla_met": true,
+  "components": [
+    {
+      "component": "Feature Extraction",
+      "budget_ms": 10.0,
+      "min_ms": 0.029,
+      "mean_ms": 0.037,
+      "median_ms": 0.036,
+      "p95_ms": 0.046,
+      "p99_ms": 0.05,
+      "max_ms": 0.051,
+      "sla_compliant": true
+    },
+    {
+      "component": "Isolation Forest ML",
+      "budget_ms": 15.0,
+      "min_ms": 4.283,
+      "mean_ms": 5.184,
+      "median_ms": 4.753,
+      "p95_ms": 6.525,
+      "p99_ms": 6.586,
+      "max_ms": 6.601,
+      "sla_compliant": true
+    },
+    {
+      "component": "Rule Engine & Sigmoid Fusion",
+      "budget_ms": 5.0,
+      "min_ms": 0.031,
+      "mean_ms": 0.044,
+      "median_ms": 0.041,
+      "p95_ms": 0.058,
+      "p99_ms": 0.065,
+      "max_ms": 0.067,
+      "sla_compliant": true
+    },
+    {
+      "component": "Persistence & Audit Chaining",
+      "budget_ms": 10.0,
+      "min_ms": 2.009,
+      "mean_ms": 3.773,
+      "median_ms": 3.165,
+      "p95_ms": 6.618,
+      "p99_ms": 8.124,
+      "max_ms": 8.5,
+      "sla_compliant": true
+    },
+    {
+      "component": "End-to-End Gateway Pipeline",
+      "budget_ms": 50.0,
+      "min_ms": 7.196,
+      "mean_ms": 9.037,
+      "median_ms": 8.967,
+      "p95_ms": 12.187,
+      "p99_ms": 13.074,
+      "max_ms": 13.296,
+      "sla_compliant": true
+    }
+  ],
+  "concurrency_benchmarks": [
+    {
+      "concurrency_level": 10,
+      "total_requests": 50,
+      "successful_requests": 50,
+      "failed_requests": 0,
+      "duration_seconds": 0.637,
+      "throughput_rps": 78.5,
+      "p50_latency_ms": 5.46,
+      "p95_latency_ms": 7.93,
+      "p99_latency_ms": 11.9,
+      "sla_compliant": true
+    }
+  ],
+  "plot_artifact_path": "D:\\projects\\3rd sem mini project\\fraud-shield\\ml\\artifacts\\performance_benchmark_plot.png"
+}

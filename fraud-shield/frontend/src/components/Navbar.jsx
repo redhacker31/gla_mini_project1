@@ -15,7 +15,8 @@ export default function Navbar({
   onRefresh, 
   autoRefresh, 
   setAutoRefresh,
-  onOpenAuditModal 
+  onOpenAuditModal,
+  onOpenBenchmarkModal
 }) {
   const isHealthy = health?.status === 'healthy';
 
@@ -65,6 +66,16 @@ export default function Navbar({
         >
           <Shield size={13} color="#10b981" />
           <span>Audit Ledger</span>
+        </button>
+
+        {/* Phase 12: SLA Benchmark Shortcut */}
+        <button
+          onClick={onOpenBenchmarkModal}
+          className="btn btn-outline btn-sm"
+          title="Inspect Sub-50ms SLA Latency Profiling"
+        >
+          <Activity size={13} color="#a855f7" />
+          <span>SLA &lt;50ms</span>
         </button>
 
         {/* Auto Refresh Toggle */}

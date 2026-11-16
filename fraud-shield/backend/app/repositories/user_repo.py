@@ -18,21 +18,26 @@ class UserRepository:
 
     @staticmethod
     def get_or_create(db: Session, user_hash: str, masked_display: str) -> User:
-        """Fetch existing user or initialize a new profile."""
+        """Fetch existing user or initialize a new profile with concurrency conflict resilience."""
         user = UserRepository.get_by_hash(db, user_hash)
         if not user:
-            user = User(
-                user_hash=user_hash,
-                masked_display=masked_display,
-                account_status="ACTIVE",
-                risk_multiplier=1.0,
-                total_transactions=0,
-                flagged_count=0,
-                created_at=datetime.now(timezone.utc),
-                last_active_at=datetime.now(timezone.utc),
-            )
-            db.add(user)
-            db.flush()
+            try:
+                with db.begin_nested():
+                    user = User(
+                        user_hash=user_hash,
+                        masked_display=masked_display,
+                        account_status="ACTIVE",
+                        risk_multiplier=1.0,
+                        total_transactions=0,
+                        flagged_count=0,
+                        created_at=datetime.now(timezone.utc),
+                        last_active_at=datetime.now(timezone.utc),
+                    )
+                    db.add(user)
+                    db.flush()
+            except Exception:
+                # Concurrent thread created the user simultaneously; re-query
+                user = UserRepository.get_by_hash(db, user_hash)
         return user
 
     @staticmethod

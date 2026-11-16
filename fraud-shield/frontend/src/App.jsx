@@ -8,6 +8,7 @@ import LiveTransactionFeed from './components/LiveTransactionFeed';
 import ExplainabilityStudio from './components/ExplainabilityStudio';
 import OtpModal from './components/OtpModal';
 import AuditLedgerModal from './components/AuditLedgerModal';
+import PerformanceBenchmarkModal from './components/PerformanceBenchmarkModal';
 import { 
   fetchHealthStatus, 
   fetchDashboardMetrics, 
@@ -26,6 +27,7 @@ export default function App() {
   // Modals state
   const [otpModal, setOtpModal] = useState({ isOpen: false, sessionId: null, txnId: null });
   const [auditModalOpen, setAuditModalOpen] = useState(false);
+  const [benchmarkModalOpen, setBenchmarkModalOpen] = useState(false);
   const [selectedTxnForExplain, setSelectedTxnForExplain] = useState(null);
 
   // Toast notification state
@@ -103,6 +105,7 @@ export default function App() {
         autoRefresh={autoRefresh}
         setAutoRefresh={setAutoRefresh}
         onOpenAuditModal={() => setAuditModalOpen(true)}
+        onOpenBenchmarkModal={() => setBenchmarkModalOpen(true)}
       />
 
       {/* Main Dashboard Workspace */}
@@ -162,6 +165,14 @@ export default function App() {
       {auditModalOpen && (
         <AuditLedgerModal
           onClose={() => setAuditModalOpen(false)}
+          onNotify={notify}
+        />
+      )}
+
+      {/* Phase 12: Performance & SLA Benchmark Modal */}
+      {benchmarkModalOpen && (
+        <PerformanceBenchmarkModal
+          onClose={() => setBenchmarkModalOpen(false)}
           onNotify={notify}
         />
       )}

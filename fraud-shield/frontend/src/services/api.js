@@ -244,3 +244,28 @@ export async function explainTransactionPayload(payload) {
     body: JSON.stringify(payload),
   });
 }
+
+/**
+ * Retrieve latest performance benchmark report
+ */
+export async function fetchBenchmarkReport() {
+  try {
+    return await apiRequest('/system/benchmark/latest');
+  } catch (err) {
+    console.error('Failed to fetch benchmark report:', err);
+    return null;
+  }
+}
+
+/**
+ * Trigger live on-demand SLA latency & concurrency benchmark
+ */
+export async function runBenchmark(iterations = 30, concurrencyLevels = [10, 25]) {
+  return await apiRequest('/system/benchmark/run', {
+    method: 'POST',
+    body: JSON.stringify({
+      iterations,
+      concurrency_levels: concurrencyLevels,
+    }),
+  });
+}
