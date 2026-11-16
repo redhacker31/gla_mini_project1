@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 import uuid
 from pydantic import BaseModel, Field, field_validator
+from app.security.sanitization import sanitize_text, validate_amount as sanitize_amount, validate_vpa as sanitize_vpa
 
 
 class TransactionEvaluateRequest(BaseModel):
@@ -49,27 +50,27 @@ class TransactionEvaluateRequest(BaseModel):
     @field_validator("user_id")
     @classmethod
     def validate_user_id(cls, v: str) -> str:
-        clean = v.strip()
-        if not clean:
-            raise ValueError("user_id cannot be empty or whitespace only")
-        return clean
+        return sanitize_text(v, field_name="user_id", max_length=128)
 
     @field_validator("recipient_vpa")
     @classmethod
     def validate_vpa(cls, v: str) -> str:
-        clean = v.strip().lower()
-        if "@" not in clean:
-            raise ValueError(f"Invalid VPA handle '{v}'. Must contain '@' (e.g. merchant@upi)")
-        return clean
+        return sanitize_vpa(v)
+
+    @field_validator("merchant_category")
+    @classmethod
+    def validate_category(cls, v: str) -> str:
+        return sanitize_text(v, field_name="merchant_category", max_length=64, allow_empty=True)
+
+    @field_validator("channel")
+    @classmethod
+    def validate_channel(cls, v: str) -> str:
+        return sanitize_text(v, field_name="channel", max_length=32, allow_empty=True)
 
     @field_validator("amount")
     @classmethod
     def validate_amount(cls, v: float) -> float:
-        if v <= 0:
-            raise ValueError("Transaction amount must be strictly greater than 0.00 INR")
-        if v > 100000.0:
-            raise ValueError("Amount exceeds maximum single UPI micro/macro transfer limit (INR 100,000)")
-        return round(float(v), 2)
+        return sanitize_amount(v)
 
 
 class RuleTriggerInfo(BaseModel):

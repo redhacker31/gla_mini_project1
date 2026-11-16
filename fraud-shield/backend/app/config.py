@@ -17,9 +17,18 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     API_V1_STR: str = "/api/v1"
 
-    # Security secrets
+    # Security secrets & authentication
     SECRET_KEY: str = "fraud-shield-academic-secret-key-change-in-production"
     HMAC_SECRET_KEY: str = "fraud-shield-hmac-key-2026"
+    REPLAY_ATTACK_WINDOW_SECONDS: int = 300
+
+    # Rate Limiting & Denial of Service Protection
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_REQUESTS_PER_MINUTE: int = 120
+    RATE_LIMIT_BURST_CAPACITY: int = 40
+
+    # HTTP Security Headers
+    SECURITY_HEADERS_ENABLED: bool = True
 
     # Database
     DATABASE_URL: str = "sqlite:///./fraud_shield.db"

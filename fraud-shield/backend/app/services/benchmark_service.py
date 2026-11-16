@@ -42,32 +42,38 @@ class BenchmarkService:
 
     def _resolve_artifact_dir(self) -> str:
         """Find valid path to ml/artifacts directory."""
+        base_dir = os.path.dirname(os.path.abspath(__file__))
         candidates = [
+            os.path.abspath(os.path.join(base_dir, "../../../ml/artifacts")),
+            os.path.abspath("fraud-shield/ml/artifacts"),
             os.path.abspath("ml/artifacts"),
             os.path.abspath("../ml/artifacts"),
             os.path.abspath("../../ml/artifacts"),
-            os.path.abspath("fraud-shield/ml/artifacts"),
         ]
         for c in candidates:
             if os.path.isdir(c):
                 return c
         # Default fallback
-        os.makedirs("ml/artifacts", exist_ok=True)
-        return os.path.abspath("ml/artifacts")
+        fallback = os.path.abspath(os.path.join(base_dir, "../../../ml/artifacts"))
+        os.makedirs(fallback, exist_ok=True)
+        return fallback
 
     def _resolve_docs_dir(self) -> str:
         """Find valid path to docs directory."""
+        base_dir = os.path.dirname(os.path.abspath(__file__))
         candidates = [
+            os.path.abspath(os.path.join(base_dir, "../../../docs")),
+            os.path.abspath("fraud-shield/docs"),
             os.path.abspath("docs"),
             os.path.abspath("../docs"),
             os.path.abspath("../../docs"),
-            os.path.abspath("fraud-shield/docs"),
         ]
         for c in candidates:
             if os.path.isdir(c):
                 return c
-        os.makedirs("docs", exist_ok=True)
-        return os.path.abspath("docs")
+        fallback = os.path.abspath(os.path.join(base_dir, "../../../docs"))
+        os.makedirs(fallback, exist_ok=True)
+        return fallback
 
     def profile_components(self, iterations: int = 100) -> Tuple[List[ComponentLatencyMetric], List[float]]:
         """Profile execution latency for each subcomponent across N iterations."""

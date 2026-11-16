@@ -10,6 +10,8 @@ from app.config import settings
 from app.api import api_router
 from app.database import init_db
 from app.services.anomaly_detector import anomaly_detector_service
+from app.security.security_headers import SecurityHeadersMiddleware
+from app.security.rate_limiter import RateLimiterMiddleware
 
 
 @asynccontextmanager
@@ -42,6 +44,12 @@ def create_application() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Configure OWASP HTTP Security Headers
+    application.add_middleware(SecurityHeadersMiddleware)
+
+    # Configure Token Bucket Rate Limiting
+    application.add_middleware(RateLimiterMiddleware)
 
     # Health check endpoint at /api/v1/health
     @application.get(

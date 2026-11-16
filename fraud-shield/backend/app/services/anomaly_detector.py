@@ -15,8 +15,11 @@ class AnomalyDetectorService:
 
     def __init__(self, model_path: Optional[str] = None):
         if model_path is None:
-            # Default location relative to backend or project root
+            # Default location relative to file, backend, or project root
+            base_dir = os.path.dirname(os.path.abspath(__file__))
             candidates = [
+                os.path.abspath(os.path.join(base_dir, "../../../ml/artifacts/isolation_forest_pipeline.joblib")),
+                os.path.abspath("fraud-shield/ml/artifacts/isolation_forest_pipeline.joblib"),
                 os.path.abspath("ml/artifacts/isolation_forest_pipeline.joblib"),
                 os.path.abspath("../ml/artifacts/isolation_forest_pipeline.joblib"),
                 os.path.abspath("../../ml/artifacts/isolation_forest_pipeline.joblib"),
