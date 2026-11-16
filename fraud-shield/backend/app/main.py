@@ -51,7 +51,13 @@ def create_application() -> FastAPI:
     # Configure Token Bucket Rate Limiting
     application.add_middleware(RateLimiterMiddleware)
 
-    # Health check endpoint at /api/v1/health
+    # Health check endpoint at /api/v1/health and /health alias
+    @application.get(
+        "/health",
+        tags=["System Health"],
+        summary="Service Health Check (Orchestrator Probe)",
+        include_in_schema=False,
+    )
     @application.get(
         f"{settings.API_V1_STR}/health",
         tags=["System Health"],

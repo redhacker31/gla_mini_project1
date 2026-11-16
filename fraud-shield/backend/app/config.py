@@ -2,7 +2,7 @@
 
 Loads settings from environment variables and .env file with safe defaults.
 """
-from typing import List, Union
+from typing import List, Optional, Union
 from pydantic import AnyHttpUrl, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -30,8 +30,9 @@ class Settings(BaseSettings):
     # HTTP Security Headers
     SECURITY_HEADERS_ENABLED: bool = True
 
-    # Database
+    # Database & Storage
     DATABASE_URL: str = "sqlite:///./fraud_shield.db"
+    MODEL_ARTIFACT_PATH: Optional[str] = None
 
     # Risk Engine Thresholds (Configurable)
     # Low Risk: < 0.45, Medium Risk: [0.45, 0.80), High Risk: >= 0.80

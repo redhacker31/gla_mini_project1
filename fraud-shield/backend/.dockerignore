@@ -1,0 +1,38 @@
+# Git and version control
+.git
+.gitignore
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+env/
+venv/
+ENV/
+
+# Local databases and WAL logs (persisted via Docker volumes instead)
+*.db
+*.db-shm
+*.db-wal
+
+# Local environment secrets
+.env
+.env.*
+!.env.example
+
+# IDE & OS caches
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

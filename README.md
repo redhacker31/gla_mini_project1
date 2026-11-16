@@ -34,5 +34,21 @@ This repository contains the source code, machine learning pipelines, and docume
 - [x] **Phase 11:** Fraud Scenario Simulator & Rule/ML Explainability Visualizations
 - [x] **Phase 12:** Rigorous Performance Benchmarking & Sub-50ms Concurrency Profiling
 - [x] **Phase 13:** Security Hardening, Rate Limiting & Input Sanitization
-- [ ] **Phase 14:** Production Containerization & Multi-Service Orchestration (Docker)
+- [x] **Phase 14:** Production Containerization & Multi-Service Orchestration (Docker)
 - [ ] **Phase 15:** Capstone Documentation, Demonstration Script & Final Report
+
+---
+
+### Docker Multi-Service Orchestration
+Launch the containerized system (FastAPI backend + React Vite on Nginx reverse proxy + SQLite WAL persistence volume):
+
+```bash
+# Build and launch all services in detached mode
+docker compose up --build -d
+
+# Verify container health probes
+docker compose ps
+```
+- **React Analyst Dashboard:** [http://localhost:5173](http://localhost:5173)
+- **FastAPI OpenAPI Swagger:** [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Healthcheck Probe:** [http://localhost:8000/health](http://localhost:8000/health)

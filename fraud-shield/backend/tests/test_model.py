@@ -5,7 +5,21 @@ import numpy as np
 import pytest
 
 from app.services.anomaly_detector import AnomalyDetectorService
-from ml.data_processing.batch_feature_pipeline import FEATURE_NAMES
+
+try:
+    from ml.data_processing.batch_feature_pipeline import FEATURE_NAMES
+except ImportError:
+    FEATURE_NAMES = [
+        "amount",
+        "tx_count_5m",
+        "tx_count_1h",
+        "tx_count_24h",
+        "tx_amount_sum_5m",
+        "tx_amount_sum_1h",
+        "delta_t_seconds",
+        "entropy_category",
+        "amount_to_avg_ratio_24h",
+    ]
 
 
 @pytest.fixture

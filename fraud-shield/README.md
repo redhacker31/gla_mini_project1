@@ -60,7 +60,21 @@ fraud-shield/
 
 ## 4. Quick Start
 
-### Backend Setup
+### Docker Multi-Service Quick Start
+```bash
+# Run both Backend & Frontend via Docker Compose
+docker compose up --build -d
+
+# Check service health
+docker compose ps
+
+# View live telemetry
+# Dashboard: http://localhost:5173
+# FastAPI Docs: http://localhost:8000/docs
+# Healthcheck: http://localhost:8000/health
+```
+
+### Backend Setup (Bare Metal / Dev)
 ```bash
 cd fraud-shield/backend
 python -m venv .venv

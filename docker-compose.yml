@@ -1,0 +1,66 @@
+# ==============================================================================
+# Fraud Shield - Root Docker Compose Orchestration File
+# Allows running `docker compose up --build` directly from project repository root
+# ==============================================================================
+
+services:
+  backend:
+    build:
+      context: ./fraud-shield/backend
+      dockerfile: Dockerfile
+    container_name: fraud-shield-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - DEBUG=false
+      - DATABASE_URL=sqlite:////app/data/fraud_shield.db
+      - MODEL_ARTIFACT_PATH=/app/artifacts/isolation_forest_pipeline.joblib
+      - RATE_LIMIT_ENABLED=true
+      - RATE_LIMIT_REQUESTS_PER_MINUTE=120
+      - RATE_LIMIT_BURST_CAPACITY=40
+      - SECURITY_HEADERS_ENABLED=true
+      - RISK_THRESHOLD_LOW=0.45
+      - RISK_THRESHOLD_HIGH=0.80
+      - BACKEND_CORS_ORIGINS=["http://localhost:5173","http://localhost:80","http://localhost:3000","http://127.0.0.1:5173","http://127.0.0.1:80"]
+    volumes:
+      - fraud-shield-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - fraud-shield-net
+
+  frontend:
+    build:
+      context: ./fraud-shield/frontend
+      dockerfile: Dockerfile
+    container_name: fraud-shield-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - fraud-shield-net
+
+volumes:
+  fraud-shield-data:
+    name: fraud_shield_persistent_storage
+    driver: local
+
+networks:
+  fraud-shield-net:
+    name: fraud_shield_network
+    driver: bridge

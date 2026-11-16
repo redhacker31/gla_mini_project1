@@ -3,6 +3,7 @@
 Configured for high-throughput SQLite with Write-Ahead Logging (WAL) mode,
 foreign key enforcement, and thread-safe session scoping.
 """
+import os
 from contextlib import contextmanager
 from typing import Generator
 from sqlalchemy import create_engine, event
@@ -15,6 +16,12 @@ from app.config import settings
 connect_args = {}
 if settings.DATABASE_URL.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
+    # Ensure directory exists for persistent file-based SQLite databases (e.g. Docker volumes)
+    if not settings.DATABASE_URL.startswith("sqlite:///:memory:"):
+        clean_path = settings.DATABASE_URL.replace("sqlite:///", "")
+        dir_name = os.path.dirname(os.path.abspath(clean_path))
+        if dir_name:
+            os.makedirs(dir_name, exist_ok=True)
 
 # Engine instantiation
 engine = create_engine(
