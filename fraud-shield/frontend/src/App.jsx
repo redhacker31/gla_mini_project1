@@ -5,6 +5,7 @@ import RiskDistributionChart from './components/RiskDistributionChart';
 import SimulationControl from './components/SimulationControl';
 import TransactionEvaluator from './components/TransactionEvaluator';
 import LiveTransactionFeed from './components/LiveTransactionFeed';
+import ExplainabilityStudio from './components/ExplainabilityStudio';
 import OtpModal from './components/OtpModal';
 import AuditLedgerModal from './components/AuditLedgerModal';
 import { 
@@ -25,6 +26,7 @@ export default function App() {
   // Modals state
   const [otpModal, setOtpModal] = useState({ isOpen: false, sessionId: null, txnId: null });
   const [auditModalOpen, setAuditModalOpen] = useState(false);
+  const [selectedTxnForExplain, setSelectedTxnForExplain] = useState(null);
 
   // Toast notification state
   const [notification, setNotification] = useState(null);
@@ -125,12 +127,23 @@ export default function App() {
           onNotify={notify}
         />
 
+        {/* Phase 11: Explainability Studio & What-If Scenario Simulator */}
+        <ExplainabilityStudio
+          selectedTxnId={selectedTxnForExplain}
+          onClearSelectedTxn={() => setSelectedTxnForExplain(null)}
+          onNotify={notify}
+        />
+
         {/* Live Evaluated Transactions Stream Table */}
         <LiveTransactionFeed
           transactions={transactions}
           loading={loading}
           onRefresh={() => refreshData(true)}
           onOpenOtpModal={handleOpenOtpModal}
+          onSelectTxnForExplain={(txnId) => {
+            setSelectedTxnForExplain(txnId);
+            notify(`Loaded transaction ${txnId.substring(0, 8)} into Explainability Studio.`, 'info');
+          }}
         />
       </main>
 

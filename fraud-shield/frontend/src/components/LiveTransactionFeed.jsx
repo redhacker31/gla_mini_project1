@@ -16,7 +16,8 @@ export default function LiveTransactionFeed({
   transactions, 
   loading, 
   onRefresh, 
-  onOpenOtpModal 
+  onOpenOtpModal,
+  onSelectTxnForExplain
 }) {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -148,18 +149,27 @@ export default function LiveTransactionFeed({
                       {latency.toFixed(1)} ms
                     </td>
                     <td>
-                      {tx.status === 'PENDING_VERIFICATION' && tx.session_id ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        {tx.status === 'PENDING_VERIFICATION' && tx.session_id && (
+                          <button
+                            onClick={() => onOpenOtpModal(tx.session_id, tx.txn_id)}
+                            className="btn btn-warning btn-sm"
+                            style={{ padding: '0.2rem 0.45rem', fontSize: '0.7rem' }}
+                            title="Verify Out-of-Band Step-Up OTP"
+                          >
+                            <KeyRound size={11} />
+                            <span>OTP</span>
+                          </button>
+                        )}
                         <button
-                          onClick={() => onOpenOtpModal(tx.session_id, tx.txn_id)}
-                          className="btn btn-warning btn-sm"
-                          style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}
+                          onClick={() => onSelectTxnForExplain?.(tx.txn_id)}
+                          className="btn btn-outline btn-sm"
+                          style={{ padding: '0.2rem 0.45rem', fontSize: '0.7rem' }}
+                          title="Inspect AI/ML & Rule Explainability Waterfall"
                         >
-                          <KeyRound size={11} />
-                          <span>Verify OTP</span>
+                          <span>Explain</span>
                         </button>
-                      ) : (
-                        <span style={{ color: 'var(--text-dim)', fontSize: '0.7rem' }}>—</span>
-                      )}
+                      </div>
                     </td>
                   </tr>
                 );

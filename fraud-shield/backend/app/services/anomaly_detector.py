@@ -99,6 +99,30 @@ class AnomalyDetectorService:
 
         return round(float(np.clip(score, 0.0, 1.0)), 4)
 
+    def predict_anomaly_scores_batch(self, feature_matrix: np.ndarray) -> np.ndarray:
+        """Batch predict normalized anomaly scores S_ml in [0.0, 1.0] for an (N, D) array."""
+        if feature_matrix.ndim == 1:
+            matrix = feature_matrix.reshape(1, -1)
+        else:
+            matrix = feature_matrix
+
+        if self.is_loaded and self.model is not None:
+            import pandas as pd
+            if self.scaler is not None:
+                if self.feature_names and len(self.feature_names) == matrix.shape[1]:
+                    feat_df = pd.DataFrame(matrix, columns=self.feature_names)
+                    scaled_feats = self.scaler.transform(feat_df)
+                else:
+                    scaled_feats = self.scaler.transform(matrix)
+            else:
+                scaled_feats = matrix
+
+            raw_decisions = self.model.decision_function(scaled_feats)
+            scores = np.clip(0.5 - raw_decisions, 0.0, 1.0)
+            return np.round(scores, 4)
+
+        return np.array([self.predict_anomaly_score(row) for row in matrix], dtype=np.float64)
+
 
 # Singleton instance for backend runtime
 anomaly_detector_service = AnomalyDetectorService()

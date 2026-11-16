@@ -217,3 +217,30 @@ export async function triggerScenario(scenario, userId = 'user_sim_test', count 
     }),
   });
 }
+
+/**
+ * Run real-time what-if parametric sensitivity simulation
+ */
+export async function fetchWhatIfAnalysis(params) {
+  return await apiRequest('/explainability/what-if', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  });
+}
+
+/**
+ * Fetch full explainability report for a persisted transaction by ID
+ */
+export async function fetchTransactionExplanation(txnId) {
+  return await apiRequest(`/explainability/transaction/${encodeURIComponent(txnId)}`);
+}
+
+/**
+ * Compute explainability report for an unpersisted transaction payload
+ */
+export async function explainTransactionPayload(payload) {
+  return await apiRequest('/explainability/explain-transaction', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
