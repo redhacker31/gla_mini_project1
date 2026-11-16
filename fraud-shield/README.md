@@ -98,3 +98,13 @@ npm run dev
 ```
 - Web Application: `http://localhost:5173`
 
+---
+
+## 5. Academic Capstone Deliverables
+- [**Final Technical Capstone Report**](docs/final_capstone_report.md): In-depth academic report covering problem statement, mathematical formulations (Isolation Forest, Sigmoid fusion), empirical evaluation, and DPDP Act 2023 compliance.
+- [**Interactive Evaluator Viva & Demo Script**](docs/demo_script.md): Step-by-step walkthrough script for the project evaluation committee and viva panel covering 7 core operational scenarios.
+- [**System Performance & Latency Benchmark**](docs/performance_benchmarks.md): Empirical latency breakdown (p95 17.27ms < 50ms) and multi-threaded stress tests.
+- [**Security Hardening & Threat Model**](docs/security.md): STRIDE threat model, Token Bucket rate limiting, HMAC-SHA256 authentication, and anti-injection defenses.
+- [**Containerization & Deployment Guide**](docs/containerization_deployment.md): Multi-stage Dockerfiles and Docker Compose orchestration.
+
+

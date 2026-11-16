@@ -35,7 +35,27 @@ This repository contains the source code, machine learning pipelines, and docume
 - [x] **Phase 12:** Rigorous Performance Benchmarking & Sub-50ms Concurrency Profiling
 - [x] **Phase 13:** Security Hardening, Rate Limiting & Input Sanitization
 - [x] **Phase 14:** Production Containerization & Multi-Service Orchestration (Docker)
-- [ ] **Phase 15:** Capstone Documentation, Demonstration Script & Final Report
+- [x] **Phase 15:** Capstone Documentation, Demonstration Script & Final Report
+
+---
+
+### Capstone Documentation & Deliverables
+- [**Final Technical Capstone Report**](./fraud-shield/docs/final_capstone_report.md): Full academic report covering mathematical formulations, Isolation Forest scoring, sigmoid fusion, empirical evaluations, and DPDP Act 2023 compliance.
+- [**Interactive Evaluator Viva & Demo Script**](./fraud-shield/docs/demo_script.md): Step-by-step 10-minute presentation and live walkthrough script covering 7 operational scenarios and viva defense Q&A.
+- [**System Performance & Latency Benchmark Report**](./fraud-shield/docs/performance_benchmarks.md): Subcomponent latency breakdown (Feature Extraction: 0.08ms, ML: 10.07ms, Persistence: 8.99ms, p95: 17.27ms < 50ms) and multi-threaded stress tests.
+- [**Security Hardening & STRIDE Threat Model**](./fraud-shield/docs/security.md): Threat mitigation matrix, Token Bucket rate limiting, HMAC-SHA256 signature verification, and input sanitization.
+- [**Cloud-Native Containerization & Deployment Guide**](./fraud-shield/docs/containerization_deployment.md): Multi-stage Docker builds, Nginx reverse proxy, and Docker Compose orchestration.
+- [**Approved Project Synopsis**](./Fraud_Shield_Project_Synopsis_finalpdf.pdf): University-approved B.Tech capstone project synopsis.
+
+---
+
+### Key Empirical Performance Metrics
+- **PR-AUC:** **0.8119** (Target: $\ge 0.75$)
+- **Recall @ 1% FPR:** **80.56%** (Target: $\ge 75.0\%$)
+- **ROC-AUC:** **0.9826**
+- **End-to-End Latency:** **Mean: 12.15 ms**, **p95: 17.27 ms** (SLA Budget: $\le 50.0\text{ ms}$)
+- **Concurrent Throughput:** **53.7 Requests/second** (0.0% failure rate)
+- **Automated Test Coverage:** **76 / 76 Unit & Integration Tests Passing** (100%)
 
 ---
 
