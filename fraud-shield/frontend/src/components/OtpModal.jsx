@@ -54,6 +54,17 @@ export default function OtpModal({
     return () => clearInterval(timer);
   }, []);
 
+  // Handle ESC key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   // Sandbox helper: autofill OTP
   const handleSandboxAutofill = async () => {
     try {
@@ -125,7 +136,12 @@ export default function OtpModal({
   };
 
   return (
-    <div className="modal-overlay">
+    <div 
+      className="modal-overlay"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose?.();
+      }}
+    >
       <div className="modal-content">
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

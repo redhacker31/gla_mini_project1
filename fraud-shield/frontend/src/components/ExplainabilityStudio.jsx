@@ -40,6 +40,7 @@ export default function ExplainabilityStudio({
   const [isBlacklist, setIsBlacklist] = useState(false);
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(false);
+  const debounceRef = React.useRef(null);
 
   // Run What-If simulation
   const runSimulation = useCallback(async (currentParams) => {
@@ -52,6 +53,20 @@ export default function ExplainabilityStudio({
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  const debouncedRunSimulation = useCallback((currentParams) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      runSimulation(currentParams);
+    }, 60);
+  }, [runSimulation]);
+
+  // Clean up debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, []);
 
   // When selectedTxnId changes, fetch explanation for that specific persisted transaction
@@ -89,7 +104,7 @@ export default function ExplainabilityStudio({
   const handleParamChange = (key, value) => {
     const updated = { ...params, [key]: parseFloat(value) || 0 };
     setParams(updated);
-    runSimulation(updated);
+    debouncedRunSimulation(updated);
   };
 
   // Toggle blacklist

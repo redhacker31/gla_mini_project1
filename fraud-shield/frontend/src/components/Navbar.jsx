@@ -19,6 +19,9 @@ export default function Navbar({
   onOpenBenchmarkModal
 }) {
   const isHealthy = health?.status === 'healthy';
+  const docsUrl = typeof window !== 'undefined' && window.location.port === '5173' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://127.0.0.1:8000/docs'
+    : '/docs';
 
   return (
     <header className="header">
@@ -101,7 +104,7 @@ export default function Navbar({
 
         {/* Swagger Docs Link */}
         <a
-          href="http://127.0.0.1:8000/docs"
+          href={docsUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="btn btn-outline btn-sm"

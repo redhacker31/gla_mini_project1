@@ -46,12 +46,27 @@ export default function PerformanceBenchmarkModal({ onClose, onNotify }) {
     }
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   const p95 = report?.overall_p95_latency_ms ?? 17.27;
   const mean = report?.overall_mean_latency_ms ?? 14.34;
   const slaMet = report?.sla_met ?? true;
 
   return (
-    <div className="modal-overlay">
+    <div 
+      className="modal-overlay"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose?.();
+      }}
+    >
       <div className="modal-content" style={{ maxWidth: '850px' }}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

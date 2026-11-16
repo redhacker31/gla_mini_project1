@@ -45,6 +45,9 @@ class RiskEngineService:
         "fraud_siphon@paytm",
         "scam_qr@oksbi",
         "mule_drainer@ibl",
+        "blacklisted_mule99@upi",
+        "mule_syndicate_01@upi",
+        "mule_syndicate@upi",
     }
 
     def __init__(

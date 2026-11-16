@@ -120,6 +120,14 @@ class FeatureEngineeringService:
         self._buffers: Dict[str, SlidingWindowBuffer] = {}
 
     def get_or_create_buffer(self, user_id: str) -> SlidingWindowBuffer:
+        # Memory safety: Periodically purge inactive user buffers if active cache exceeds threshold
+        if len(self._buffers) > 10000:
+            now = time.time()
+            cutoff = now - 86400.0
+            stale = [uid for uid, buf in self._buffers.items() if not buf.events or buf.events[-1][0] < cutoff]
+            for uid in stale[:2000]:
+                del self._buffers[uid]
+
         if user_id not in self._buffers:
             self._buffers[user_id] = SlidingWindowBuffer()
         return self._buffers[user_id]

@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     OTP_EXPIRY_SECONDS: int = 180
     OTP_MAX_ATTEMPTS: int = 3
     OTP_RESEND_MAX: int = 2
+    ENABLE_SANDBOX_OTP_ENDPOINT: bool = True
 
     # CORS settings
     BACKEND_CORS_ORIGINS: List[str] = [

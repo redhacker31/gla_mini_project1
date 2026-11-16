@@ -42,6 +42,13 @@ class TokenBucketRateLimiter:
         """
         now = time.time()
         with self._lock:
+            # Memory safety: Periodically purge stale client buckets if table exceeds threshold
+            if len(self._buckets) > 5000:
+                cutoff = now - 3600.0
+                stale_keys = [k for k, b in self._buckets.items() if b.last_update < cutoff]
+                for k in stale_keys:
+                    del self._buckets[k]
+
             bucket = self._buckets.get(key)
             if bucket is None:
                 bucket = Bucket(tokens=self.capacity, last_update=now)

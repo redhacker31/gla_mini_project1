@@ -140,8 +140,11 @@ class SimulationService:
         self._running = True
         self._last_burst_time = time.time()
 
-        # Launch async task on the current event loop
-        loop = asyncio.get_event_loop()
+        # Launch async task on the active event loop
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.get_event_loop()
         self._task = loop.create_task(self._generator_loop())
         logger.info(
             "Transaction simulation engine started at %.1f TPS (fraud ratio: %.2f)",

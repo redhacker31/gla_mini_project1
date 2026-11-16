@@ -162,10 +162,10 @@ async def get_session_status(
 )
 async def get_latest_dispatched_otp(session_id: str):
     """Retrieve dispatched OTP for development testing and interactive UI simulation."""
-    if not settings.DEBUG and settings.ENVIRONMENT == "production":
+    if not settings.ENABLE_SANDBOX_OTP_ENDPOINT and (not settings.DEBUG and settings.ENVIRONMENT == "production"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Endpoint disabled in production environment.",
+            detail="Sandbox OTP retrieval disabled in production environment.",
         )
     from app.services.sms_gateway import sms_gateway
     dispatch = sms_gateway.get_latest_dispatch(session_id)

@@ -17,17 +17,37 @@ router = APIRouter()
 @router.get("/metrics", summary="Live Telemetry Metrics")
 async def get_dashboard_metrics(db: Session = Depends(get_db)) -> Dict[str, Any]:
     """Retrieve high-level streaming telemetry metrics from persistent database."""
-    total_txns = db.query(Transaction).count()
-    approved_count = db.query(Transaction).filter(Transaction.status == "APPROVED").count()
-    challenge_count = db.query(Transaction).filter(Transaction.status == "PENDING_VERIFICATION").count()
-    blocked_count = db.query(Transaction).filter(Transaction.status.in_(["REJECTED", "SECURITY_FLAGGED"])).count()
+    # Group status counts via single aggregate query
+    status_counts = dict(
+        db.query(Transaction.status, func.count(Transaction.txn_id))
+        .group_by(Transaction.status)
+        .all()
+    )
+    total_txns = sum(status_counts.values())
+    approved_count = status_counts.get("APPROVED", 0)
+    challenge_count = status_counts.get("PENDING_VERIFICATION", 0)
+    blocked_count = status_counts.get("REJECTED", 0) + status_counts.get("SECURITY_FLAGGED", 0)
 
-    low_tier_count = db.query(RiskAssessment).filter(RiskAssessment.risk_tier == "LOW").count()
-    med_tier_count = db.query(RiskAssessment).filter(RiskAssessment.risk_tier == "MEDIUM").count()
-    high_tier_count = db.query(RiskAssessment).filter(RiskAssessment.risk_tier == "HIGH").count()
+    # Group risk tier counts via single aggregate query
+    tier_counts = dict(
+        db.query(RiskAssessment.risk_tier, func.count(RiskAssessment.id))
+        .group_by(RiskAssessment.risk_tier)
+        .all()
+    )
+    low_tier_count = tier_counts.get("LOW", 0)
+    med_tier_count = tier_counts.get("MEDIUM", 0)
+    high_tier_count = tier_counts.get("HIGH", 0)
 
-    # Latency calculations
-    latencies = [r[0] for r in db.query(RiskAssessment.latency_ms).all() if r[0] is not None]
+    # Rolling latency calculation (bounded to recent 1,000 records for sub-5ms performance)
+    latencies = [
+        r[0] for r in (
+            db.query(RiskAssessment.latency_ms)
+            .filter(RiskAssessment.latency_ms.isnot(None))
+            .order_by(RiskAssessment.id.desc())
+            .limit(1000)
+            .all()
+        )
+    ]
     if latencies:
         p95_latency = float(np.percentile(latencies, 95))
         avg_latency = float(np.mean(latencies))
