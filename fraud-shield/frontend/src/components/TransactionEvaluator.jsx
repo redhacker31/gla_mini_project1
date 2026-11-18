@@ -97,6 +97,34 @@ export default function TransactionEvaluator({
     }
   };
 
+  const handleRapidBurst = async () => {
+    setLoading(true);
+    setEvalResult(null);
+    try {
+      const payload = {
+        user_id: formData.user_id,
+        amount: parseFloat(formData.amount),
+        recipient_id: formData.recipient_vpa,
+        recipient_vpa: formData.recipient_vpa,
+        merchant_category: formData.merchant_category,
+        channel: formData.channel,
+        device_id: formData.device_id,
+      };
+      let lastResp = null;
+      for (let i = 0; i < 3; i++) {
+        lastResp = await evaluateTransaction(payload);
+        onTransactionEvaluated?.(lastResp);
+        if (i < 2) await new Promise((r) => setTimeout(r, 60));
+      }
+      setEvalResult(lastResp);
+      onNotify?.(`Executed 3-transaction rapid burst. Final status: ${lastResp.status}`, 'info');
+    } catch (err) {
+      onNotify?.(`Burst failed: ${err.message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getTierColor = (tier) => {
     if (tier === 'LOW') return 'var(--tier-low)';
     if (tier === 'MEDIUM') return 'var(--tier-med)';
@@ -212,7 +240,18 @@ export default function TransactionEvaluator({
           </div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.75rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={handleRapidBurst}
+            className="btn btn-outline"
+            title="Fire 3 identical micro-transactions in rapid succession (<1s) to test velocity rules"
+          >
+            <Zap size={14} color="#f59e0b" />
+            <span>Fire Rapid Burst (x3)</span>
+          </button>
+
           <button type="submit" disabled={loading} className="btn btn-primary">
             {loading ? <Zap size={14} className="spin" /> : <Send size={14} />}
             <span>{loading ? 'Evaluating Risk & Model...' : 'Evaluate Micro-Transaction Risk'}</span>
@@ -246,10 +285,10 @@ export default function TransactionEvaluator({
                 Evaluated Txn ID: <code style={{ color: '#fff' }}>{evalResult.txn_id}</code>
               </div>
               <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#fff', marginTop: '0.2rem' }}>
-                ₹{evalResult.amount?.toFixed(2)} &rarr; {evalResult.recipient_vpa_masked || formData.recipient_vpa}
+                ₹{evalResult.amount?.toFixed(2)} &rarr; {evalResult.recipient_vpa_masked || evalResult.recipient_vpa || formData.recipient_vpa}
               </div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginTop: '0.2rem' }}>
-                Salted DPDP Hash: <code>{evalResult.user_hash?.substring(0, 16)}...</code>
+                Salted DPDP Hash: <code>{(evalResult.user_hash || evalResult.user_id)?.substring(0, 16)}...</code>
               </div>
             </div>
 
@@ -353,7 +392,7 @@ export default function TransactionEvaluator({
                       fontFamily: 'Consolas, monospace',
                     }}
                   >
-                    {rule.rule_id} (weight: +{rule.weight})
+                    {rule.rule_id} (+{(rule.penalty ?? rule.weight)?.toFixed(2) || '0.00'})
                   </span>
                 ))}
               </div>

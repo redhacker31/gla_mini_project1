@@ -46,7 +46,9 @@ class SimulationStatusResponse(BaseModel):
     """Status report for the background streaming simulation engine."""
 
     running: bool
+    is_running: bool = False
     rate_tps: float
+    current_tps: Optional[float] = None
     fraud_ratio: float
     total_generated: int
     approved_count: int
@@ -84,5 +86,7 @@ class ScenarioTriggerResponse(BaseModel):
 
     scenario: str
     transactions_generated: int
+    count: Optional[int] = None
     results: List[TransactionEvaluateResponse]
+    evaluations: Optional[List[TransactionEvaluateResponse]] = None
     summary: str

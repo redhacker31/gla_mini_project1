@@ -87,8 +87,10 @@ class TransactionEvaluateResponse(BaseModel):
 
     txn_id: str = Field(..., description="Unique transaction UUID assigned by the gateway")
     user_id: str
+    user_hash: Optional[str] = Field(default=None, description="Salted SHA-256 DPDP identifier")
     amount: float
     recipient_vpa: str
+    recipient_vpa_masked: Optional[str] = Field(default=None, description="Masked destination VPA")
     timestamp: datetime
     channel: str
     status: str = Field(
@@ -141,8 +143,10 @@ class TransactionDetail(BaseModel):
     """Full detail of a recorded transaction."""
     txn_id: str
     user_id: str
+    user_hash: Optional[str] = None
     amount: float
     recipient_vpa: str
+    recipient_vpa_masked: Optional[str] = None
     timestamp: datetime
     channel: str
     status: str

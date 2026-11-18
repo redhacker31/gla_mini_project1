@@ -22,12 +22,13 @@ def clean_storage():
 
 def test_evaluate_routine_transaction_low_risk():
     """Verify routine micro-payment evaluates to Low Risk (200 OK, APPROVED, no OTP prompt)."""
-    # 1. Warmup call with separate user
-    client.post(f"{settings.API_V1_STR}/transactions/evaluate", json={
-        "user_id": "usr_warmup_account",
-        "amount": 50.00,
-        "recipient_vpa": "tea_stall@upi",
-    })
+    # 1. Warmup calls to ensure model and database cache are warm
+    for _ in range(2):
+        client.post(f"{settings.API_V1_STR}/transactions/evaluate", json={
+            "user_id": "usr_warmup_account",
+            "amount": 50.00,
+            "recipient_vpa": "tea_stall@upi",
+        })
 
     # 2. Legitimate routine payment
     payload = {

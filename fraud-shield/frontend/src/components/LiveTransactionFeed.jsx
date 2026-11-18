@@ -24,11 +24,15 @@ export default function LiveTransactionFeed({
   const filtered = transactions.filter((tx) => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
+    const vpa = (tx.recipient_vpa_masked || tx.recipient_vpa || '').toLowerCase();
+    const user = (tx.user_hash || tx.user_id || '').toLowerCase();
+    const status = (tx.status || '').toLowerCase();
+    const txnId = (tx.txn_id || '').toLowerCase();
     return (
-      (tx.txn_id && tx.txn_id.toLowerCase().includes(term)) ||
-      (tx.recipient_vpa_masked && tx.recipient_vpa_masked.toLowerCase().includes(term)) ||
-      (tx.user_hash && tx.user_hash.toLowerCase().includes(term)) ||
-      (tx.status && tx.status.toLowerCase().includes(term))
+      txnId.includes(term) ||
+      vpa.includes(term) ||
+      user.includes(term) ||
+      status.includes(term)
     );
   });
 
@@ -96,14 +100,17 @@ export default function LiveTransactionFeed({
           <tbody>
             {filtered.length > 0 ? (
               filtered.map((tx) => {
-                const score = tx.risk_assessment?.composite_score ?? 0;
-                const tier = tx.risk_assessment?.risk_tier ?? 'LOW';
-                const latency = tx.risk_assessment?.latency_ms ?? 0;
+                const score = tx.composite_score ?? tx.risk_assessment?.composite_score ?? 0;
+                const tier = tx.risk_tier ?? tx.risk_assessment?.risk_tier ?? 'LOW';
+                const latency = tx.latency_ms ?? tx.risk_assessment?.latency_ms ?? 0;
+                const timeStr = tx.timestamp || tx.created_at;
+                const recipientVpa = tx.recipient_vpa_masked || tx.recipient_vpa || 'N/A';
+                const userDisplay = tx.user_hash || tx.user_id || 'masked';
 
                 return (
                   <tr key={tx.txn_id}>
                     <td style={{ color: 'var(--text-dim)', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
-                      {tx.created_at ? new Date(tx.created_at).toLocaleTimeString() : 'Just now'}
+                      {timeStr ? new Date(timeStr).toLocaleTimeString() : 'Just now'}
                     </td>
                     <td>
                       <code style={{ fontSize: '0.75rem', color: '#fff' }}>
@@ -112,14 +119,14 @@ export default function LiveTransactionFeed({
                     </td>
                     <td>
                       <code style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>
-                        {tx.user_hash ? tx.user_hash.substring(0, 10) + '...' : 'masked'}
+                        {userDisplay.substring(0, 10)}...
                       </code>
                     </td>
                     <td style={{ fontWeight: 700, color: '#fff' }}>
                       ₹{tx.amount?.toFixed(2)}
                     </td>
                     <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      {tx.recipient_vpa_masked || 'N/A'}
+                      {recipientVpa}
                     </td>
                     <td>
                       <span style={{

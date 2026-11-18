@@ -23,7 +23,8 @@ export default function SimulationControl({
   const [fraudRatio, setFraudRatio] = useState(0.15);
   const [lastScenarioResult, setLastScenarioResult] = useState(null);
 
-  const isRunning = simStatus?.is_running ?? false;
+  const isRunning = simStatus?.running ?? simStatus?.is_running ?? false;
+  const currentTps = simStatus?.rate_tps ?? simStatus?.current_tps ?? tpsRate;
 
   const handleToggleSimulation = async () => {
     setLoadingAction(true);
@@ -52,8 +53,12 @@ export default function SimulationControl({
     setLastScenarioResult(null);
     try {
       const result = await triggerScenario(scenarioType, 'user_analyst_test', 3);
+      const evaluations = result?.results || result?.evaluations || [];
+      const count = result?.transactions_generated ?? result?.count ?? evaluations.length;
       setLastScenarioResult({
         type: label,
+        count,
+        evaluations,
         data: result,
       });
       onNotify?.(`Triggered scenario: ${label}`, 'success');
@@ -77,7 +82,7 @@ export default function SimulationControl({
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div className={`status-badge ${isRunning ? 'status-online' : 'status-offline'}`}>
             <span className="pulse-dot"></span>
-            <span>{isRunning ? `Streaming Active (${simStatus?.current_tps || tpsRate} TPS)` : 'Generator Idle'}</span>
+            <span>{isRunning ? `Streaming Active (${currentTps} TPS)` : 'Generator Idle'}</span>
           </div>
 
           <button
@@ -238,12 +243,12 @@ export default function SimulationControl({
               Execution Summary: {lastScenarioResult.type}
             </span>
             <span style={{ color: 'var(--text-muted)' }}>
-              Evaluated {lastScenarioResult.data?.count ?? 0} transactions
+              Evaluated {lastScenarioResult.count ?? lastScenarioResult.data?.count ?? 0} transactions
             </span>
           </div>
 
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            {lastScenarioResult.data?.evaluations?.map((ev, idx) => (
+            {(lastScenarioResult.evaluations || lastScenarioResult.data?.evaluations || []).map((ev, idx) => (
               <div 
                 key={idx}
                 style={{
@@ -256,12 +261,12 @@ export default function SimulationControl({
                   gap: '0.5rem',
                 }}
               >
-                <span>Txn #{idx + 1}: ₹{ev.amount}</span>
+                <span>Txn #{idx + 1}: ₹{typeof ev.amount === 'number' ? ev.amount.toFixed(2) : ev.amount}</span>
                 <span className={`badge ${
                   ev.risk_tier === 'LOW' ? 'badge-low' : 
                   ev.risk_tier === 'MEDIUM' ? 'badge-med' : 'badge-high'
                 }`}>
-                  {ev.risk_tier} (S={ev.composite_score.toFixed(3)})
+                  {ev.risk_tier} (S={(ev.composite_score ?? 0).toFixed(3)})
                 </span>
                 <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>{ev.status}</span>
               </div>

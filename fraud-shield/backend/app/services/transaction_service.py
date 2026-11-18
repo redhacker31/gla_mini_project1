@@ -118,11 +118,16 @@ class TransactionService:
             for r in decision.triggered_rules
         ]
 
+        user_hash = hash_identifier(request.user_id)
+        masked_vpa_str = mask_vpa(request.recipient_vpa)
+
         response = TransactionEvaluateResponse(
             txn_id=txn_id,
             user_id=request.user_id,
+            user_hash=user_hash,
             amount=request.amount,
             recipient_vpa=request.recipient_vpa,
+            recipient_vpa_masked=masked_vpa_str,
             timestamp=txn_timestamp,
             channel=request.channel,
             status=status,
@@ -136,8 +141,18 @@ class TransactionService:
             latency_ms=round(total_latency_ms, 3),
         )
 
-        # In-memory registration
+        # In-memory registration with dual format support
         record = response.model_dump()
+        record["created_at"] = txn_timestamp.isoformat()
+        record["risk_assessment"] = {
+            "composite_score": decision.composite_score,
+            "ml_score": decision.ml_score,
+            "risk_tier": decision.risk_tier,
+            "action": decision.action,
+            "challenge_required": decision.challenge_required,
+            "explanation": decision.explanation,
+            "latency_ms": round(total_latency_ms, 3),
+        }
         self._transactions[txn_id] = record
         self._chronological_txn_ids.append(txn_id)
 
@@ -359,29 +374,33 @@ class TransactionService:
         data = {
             "txn_id": txn.txn_id,
             "user_id": txn.user_hash,
+            "user_hash": txn.user_hash,
             "amount": txn.amount,
             "recipient_vpa": txn.recipient_vpa_masked,
+            "recipient_vpa_masked": txn.recipient_vpa_masked,
             "timestamp": txn.created_at.isoformat() if txn.created_at else None,
+            "created_at": txn.created_at.isoformat() if txn.created_at else None,
             "channel": txn.channel,
             "status": txn.status,
             "session_id": txn.session_id,
         }
         if txn.risk_assessment:
             ra = txn.risk_assessment
-            data.update(
-                {
-                    "risk_tier": ra.risk_tier,
-                    "composite_score": ra.composite_score,
-                    "ml_score": ra.ml_score,
-                    "challenge_required": ra.challenge_required,
-                    "explanation": ra.explanation,
-                    "latency_ms": ra.latency_ms,
-                    "triggered_rules": (
-                        json.loads(ra.triggered_rules_json)
-                        if ra.triggered_rules_json
-                        else []
-                    ),
-                }
+            assessment_data = {
+                "composite_score": ra.composite_score,
+                "ml_score": ra.ml_score,
+                "risk_tier": ra.risk_tier,
+                "action": ra.action,
+                "challenge_required": ra.challenge_required,
+                "explanation": ra.explanation,
+                "latency_ms": ra.latency_ms,
+            }
+            data.update(assessment_data)
+            data["risk_assessment"] = assessment_data
+            data["triggered_rules"] = (
+                json.loads(ra.triggered_rules_json)
+                if ra.triggered_rules_json
+                else []
             )
         return data
 

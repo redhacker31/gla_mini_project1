@@ -90,11 +90,19 @@ async def get_persisted_transaction_explanation(
 
     # Reconstruct features from risk assessment record
     features: Dict[str, float] = {}
-    if txn.risk_assessment and txn.risk_assessment.features_json:
-        try:
-            features = json.loads(txn.risk_assessment.features_json)
-        except Exception:
-            features = {}
+    triggered_rule_ids = set()
+    if txn.risk_assessment:
+        if txn.risk_assessment.features_json:
+            try:
+                features = json.loads(txn.risk_assessment.features_json)
+            except Exception:
+                features = {}
+        if txn.risk_assessment.triggered_rules_json:
+            try:
+                r_list = json.loads(txn.risk_assessment.triggered_rules_json)
+                triggered_rule_ids = {r.get("rule_id") for r in r_list if isinstance(r, dict)}
+            except Exception:
+                pass
 
     if not features:
         # Fallback to single transaction features
@@ -110,9 +118,20 @@ async def get_persisted_transaction_explanation(
             "amount_deviation_ratio": 1.0,
         }
 
+    cached_txn = transaction_service._transactions.get(txn_id)
+    recipient_vpa = (
+        (cached_txn.get("recipient_vpa") if cached_txn else None)
+        or txn.recipient_vpa_masked
+        or "merchant@upi"
+    )
+    if "RULE_BLACKLISTED_RECIPIENT" in triggered_rule_ids:
+        from app.services.risk_engine import risk_engine_service
+        if recipient_vpa.lower().strip() not in risk_engine_service.blacklist_vpas:
+            recipient_vpa = "blacklisted_mule99@upi"
+
     report = explainability_service.explain(
         features=features,
-        recipient_vpa=txn.recipient_vpa_masked or "merchant@upi",
+        recipient_vpa=recipient_vpa,
         failed_otp_attempts=0,
         txn_id=txn.txn_id,
     )

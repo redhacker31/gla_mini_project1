@@ -115,7 +115,7 @@ export default function AuditLedgerModal({ onClose, onNotify }) {
                     : 'Cryptographic Hash-Chain Integrity: INTEGRITY COMPROMISED'}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  Verified {verificationResult?.records_verified ?? 0} sequential audit blocks with zero data alteration.
+                  Verified {verificationResult?.total_records ?? verificationResult?.records_verified ?? 0} sequential audit blocks with zero data alteration.
                 </div>
               </div>
             </div>

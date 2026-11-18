@@ -77,6 +77,7 @@ class AuditRepository:
             return {
                 "valid": True,
                 "total_records": 0,
+                "records_verified": 0,
                 "message": "Audit ledger is empty (valid state).",
                 "failed_record_id": None,
             }
@@ -88,6 +89,7 @@ class AuditRepository:
                 return {
                     "valid": False,
                     "total_records": len(records),
+                    "records_verified": idx,
                     "failed_record_id": rec.id,
                     "index": idx,
                     "reason": (
@@ -109,6 +111,7 @@ class AuditRepository:
                 return {
                     "valid": False,
                     "total_records": len(records),
+                    "records_verified": idx,
                     "failed_record_id": rec.id,
                     "index": idx,
                     "reason": (
@@ -122,6 +125,7 @@ class AuditRepository:
         return {
             "valid": True,
             "total_records": len(records),
+            "records_verified": len(records),
             "message": "Cryptographic audit chain fully verified. Zero tampering detected.",
             "head_hash": expected_prev,
             "failed_record_id": None,

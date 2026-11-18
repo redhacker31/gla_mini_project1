@@ -112,7 +112,9 @@ class SimulationService:
 
         return SimulationStatusResponse(
             running=self._running,
+            is_running=self._running,
             rate_tps=self._rate_tps,
+            current_tps=self._rate_tps,
             fraud_ratio=self._fraud_ratio,
             total_generated=self._total_generated,
             approved_count=self._approved_count,
@@ -321,7 +323,9 @@ class SimulationService:
         return ScenarioTriggerResponse(
             scenario=scenario.value,
             transactions_generated=len(results),
+            count=len(results),
             results=results,
+            evaluations=results,
             summary=summary,
         )
 

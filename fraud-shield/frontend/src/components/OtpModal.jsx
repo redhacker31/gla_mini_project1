@@ -35,6 +35,14 @@ export default function OtpModal({
         const info = await fetchOtpSession(sessionId);
         if (mounted && info) {
           setSessionInfo(info);
+          if (info.expires_at) {
+            const expMs = new Date(info.expires_at).getTime();
+            const nowMs = Date.now();
+            const diffSec = Math.max(0, Math.floor((expMs - nowMs) / 1000));
+            if (diffSec > 0 && diffSec <= 180) {
+              setTimeLeft(diffSec);
+            }
+          }
         }
       } catch (err) {
         console.warn('Could not load session details:', err);
