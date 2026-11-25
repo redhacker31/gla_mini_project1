@@ -40,8 +40,10 @@ logger = logging.getLogger(__name__)
 class TransactionService:
     """Coordinates risk scoring, lifecycle transitions, database persistence, and audit logging."""
 
+    MAX_CACHE_SIZE: int = 500
+
     def __init__(self):
-        # In-memory storage for high-speed cache and backwards-compatibility
+        # Bounded in-memory cache for high-speed lookup and client-facing field enrichment
         self._transactions: Dict[str, Dict] = {}
         self._chronological_txn_ids: List[str] = []
 
@@ -155,6 +157,9 @@ class TransactionService:
         }
         self._transactions[txn_id] = record
         self._chronological_txn_ids.append(txn_id)
+        if len(self._chronological_txn_ids) > self.MAX_CACHE_SIZE:
+            oldest_id = self._chronological_txn_ids.pop(0)
+            self._transactions.pop(oldest_id, None)
 
         # 5. Database Persistence & Tamper-Evident Audit Logging (Phase 7)
         self._persist_evaluation(
@@ -283,37 +288,68 @@ class TransactionService:
         self,
         limit: int = 50,
         user_id: Optional[str] = None,
+        status_filter: Optional[str] = None,
+        risk_tier: Optional[str] = None,
         db: Optional[Session] = None,
     ) -> List[Dict]:
-        """List recently evaluated transactions in reverse chronological order."""
-        # If in-memory cache has records, return from cache (preserves client-facing user IDs)
-        if self._chronological_txn_ids:
-            results = []
-            for tid in reversed(self._chronological_txn_ids):
-                txn = self._transactions.get(tid)
-                if txn:
-                    if user_id is None or txn.get("user_id") == user_id or txn.get("user_hash") == user_id:
-                        results.append(txn)
-                    if len(results) >= limit:
-                        break
-            return results
+        """List recently evaluated transactions in reverse chronological order.
 
-        # Otherwise query database
-        if db is not None:
-            user_hash = hash_identifier(user_id) if user_id else None
-            txns = transaction_repo.list(db, limit=limit, user_hash=user_hash)
-            return [self._txn_to_dict(t) for t in txns]
+        Queries SQLite so persistent history across restarts is always preserved,
+        while enriching records from the bounded in-memory cache when available.
+        """
+        user_hash = None
+        if user_id:
+            is_sha256 = len(user_id) == 64 and all(c in "0123456789abcdef" for c in user_id.lower())
+            user_hash = user_id.lower() if is_sha256 else hash_identifier(user_id)
+
+        def _query_db(session: Session) -> List[Dict]:
+            txns = transaction_repo.list(
+                session,
+                limit=limit,
+                user_hash=user_hash,
+                status=status_filter,
+                risk_tier=risk_tier,
+            )
+            output: List[Dict] = []
+            for t in txns:
+                cached = self._transactions.get(t.txn_id)
+                if cached:
+                    # Keep cached status synchronized with DB authoritative state
+                    cached["status"] = t.status
+                    output.append(cached)
+                else:
+                    output.append(self._txn_to_dict(t))
+            return output
 
         try:
+            if db is not None:
+                return _query_db(db)
             with get_db_context() as session:
-                user_hash = hash_identifier(user_id) if user_id else None
-                txns = transaction_repo.list(session, limit=limit, user_hash=user_hash)
-                if txns:
-                    return [self._txn_to_dict(t) for t in txns]
-        except Exception:
-            pass
+                return _query_db(session)
+        except Exception as exc:
+            logger.warning("Database list query failed, falling back to cache: %s", exc)
 
-        return []
+        # Fallback to in-memory cache
+        results = []
+        for tid in reversed(self._chronological_txn_ids):
+            txn = self._transactions.get(tid)
+            if not txn:
+                continue
+            if user_id is not None and txn.get("user_id") != user_id and txn.get("user_hash") != user_hash:
+                continue
+            if status_filter is not None and txn.get("status") != status_filter:
+                continue
+            if risk_tier is not None and txn.get("risk_tier") != risk_tier:
+                continue
+            results.append(txn)
+            if len(results) >= limit:
+                break
+        return results
+
+    def sync_cache_status(self, txn_id: str, new_status: str) -> None:
+        """Synchronize in-memory cached transaction status after external DB commit."""
+        if txn_id in self._transactions:
+            self._transactions[txn_id]["status"] = new_status
 
     def update_transaction_status(
         self,
@@ -321,7 +357,7 @@ class TransactionService:
         new_status: str,
         db: Optional[Session] = None,
     ) -> bool:
-        """Update transaction status upon subsequent verification (used in Phase 8)."""
+        """Update transaction status upon subsequent verification."""
         updated = False
         if txn_id in self._transactions:
             self._transactions[txn_id]["status"] = new_status
@@ -338,6 +374,7 @@ class TransactionService:
                     actor="AUTH_SERVICE",
                     details={"new_status": new_status},
                 )
+                session.commit()
             return ok
 
         try:
@@ -350,6 +387,78 @@ class TransactionService:
             logger.error("Failed to update transaction status in database: %s", exc)
 
         return updated
+
+    def review_transaction(
+        self,
+        txn_id: str,
+        decision: str,
+        analyst_note: str = "",
+        blacklist_recipient: bool = False,
+        db: Optional[Session] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Execute Fraud Analyst manual review decision (APPROVE or REJECT)."""
+        normalized = decision.strip().upper()
+        if normalized not in {"APPROVE", "REJECT"}:
+            raise ValueError("Analyst decision must be 'APPROVE' or 'REJECT'.")
+
+        new_status = "APPROVED" if normalized == "APPROVE" else "REJECTED"
+
+        def _do_review(session: Session) -> Optional[Dict[str, Any]]:
+            txn = transaction_repo.get_by_id(session, txn_id)
+            if not txn:
+                return None
+
+            old_status = txn.status
+            txn.status = new_status
+            if txn.otp_session and txn.otp_session.status == "ACTIVE":
+                txn.otp_session.status = "VERIFIED" if new_status == "APPROVED" else "LOCKED"
+
+            blacklisted_vpa = None
+            if normalized == "REJECT" and blacklist_recipient:
+                cached = self._transactions.get(txn_id)
+                candidate_vpa = (cached.get("recipient_vpa") if cached else None) or txn.recipient_vpa_masked
+                if candidate_vpa and "*" not in candidate_vpa and "@" in candidate_vpa:
+                    risk_engine_service.add_to_blacklist(candidate_vpa)
+                    blacklisted_vpa = candidate_vpa.strip().lower()
+                    audit_repo.append_log(
+                        db=session,
+                        entity_type="SECURITY_POLICY",
+                        entity_id=blacklisted_vpa,
+                        action="BLACKLIST_ADDED",
+                        actor="ANALYST",
+                        details={"source_txn_id": txn_id, "note": analyst_note or "Flagged during analyst review"},
+                    )
+
+            audit_repo.append_log(
+                db=session,
+                entity_type="TRANSACTION",
+                entity_id=txn_id,
+                action="ANALYST_REVIEW",
+                actor="ANALYST",
+                details={
+                    "old_status": old_status,
+                    "new_status": new_status,
+                    "decision": normalized,
+                    "note": analyst_note or "No remarks provided",
+                    "blacklisted_vpa": blacklisted_vpa,
+                },
+            )
+            session.commit()
+            self.sync_cache_status(txn_id, new_status)
+
+            result = self._transactions.get(txn_id) or self._txn_to_dict(txn)
+            result["status"] = new_status
+            return {
+                "transaction": result,
+                "old_status": old_status,
+                "new_status": new_status,
+                "blacklisted_vpa": blacklisted_vpa,
+            }
+
+        if db is not None:
+            return _do_review(db)
+        with get_db_context() as session:
+            return _do_review(session)
 
     def clear_records(self):
         """Reset internal storage and clear database tables (for test suite hygiene)."""

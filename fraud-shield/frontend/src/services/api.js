@@ -84,12 +84,12 @@ export async function evaluateTransaction(transactionData) {
 /**
  * Fetch recently evaluated transactions from SQLite persistence
  */
-export async function fetchTransactions(limit = 20, userId = null) {
+export async function fetchTransactions(limit = 50, userId = null, status = null, riskTier = null) {
   try {
     let endpoint = `/transactions?limit=${limit}`;
-    if (userId) {
-      endpoint += `&user_id=${encodeURIComponent(userId)}`;
-    }
+    if (userId) endpoint += `&user_id=${encodeURIComponent(userId)}`;
+    if (status) endpoint += `&status=${encodeURIComponent(status)}`;
+    if (riskTier) endpoint += `&risk_tier=${encodeURIComponent(riskTier)}`;
     return await apiRequest(endpoint);
   } catch (err) {
     console.error('Failed to list transactions:', err);
@@ -102,6 +102,20 @@ export async function fetchTransactions(limit = 20, userId = null) {
  */
 export async function fetchTransaction(txnId) {
   return await apiRequest(`/transactions/${encodeURIComponent(txnId)}`);
+}
+
+/**
+ * Submit Fraud Analyst manual review override for a transaction
+ */
+export async function reviewTransaction(txnId, decision, analystNote = '', blacklistRecipient = false) {
+  return await apiRequest(`/transactions/${encodeURIComponent(txnId)}/review`, {
+    method: 'POST',
+    body: JSON.stringify({
+      decision,
+      analyst_note: analystNote,
+      blacklist_recipient: blacklistRecipient,
+    }),
+  });
 }
 
 /**
@@ -267,5 +281,84 @@ export async function runBenchmark(iterations = 30, concurrencyLevels = [10, 25]
       iterations,
       concurrency_levels: concurrencyLevels,
     }),
+  });
+}
+
+/**
+ * Retrieve active security controls posture
+ */
+export async function fetchSecurityStatus() {
+  return await apiRequest('/system/security/status');
+}
+
+/**
+ * Retrieve active blacklisted VPAs and live risk thresholds
+ */
+export async function fetchBlacklistAndPolicy() {
+  return await apiRequest('/system/security/blacklist');
+}
+
+/**
+ * Add a recipient VPA to the live Risk Engine blacklist
+ */
+export async function addBlacklistVpa(vpa, reason = 'Added via Security Console') {
+  return await apiRequest('/system/security/blacklist', {
+    method: 'POST',
+    body: JSON.stringify({ vpa, reason }),
+  });
+}
+
+/**
+ * Remove a recipient VPA from the live Risk Engine blacklist
+ */
+export async function removeBlacklistVpa(vpa) {
+  return await apiRequest(`/system/security/blacklist/${encodeURIComponent(vpa)}`, {
+    method: 'DELETE',
+  });
+}
+
+/**
+ * Tune composite risk tier boundaries
+ */
+export async function updateRiskThresholds(thresholdLow, thresholdHigh) {
+  return await apiRequest('/system/security/thresholds', {
+    method: 'PATCH',
+    body: JSON.stringify({
+      threshold_low: thresholdLow,
+      threshold_high: thresholdHigh,
+    }),
+  });
+}
+
+/**
+ * Generate HMAC-SHA256 gateway signature for sandbox testing
+ */
+export async function generateHmacSignature(payload) {
+  return await apiRequest('/system/security/generate-signature', {
+    method: 'POST',
+    body: JSON.stringify({ payload }),
+  });
+}
+
+/**
+ * Verify HMAC-SHA256 gateway signature against backend
+ */
+export async function verifyHmacSignature(payload, signature, timestamp) {
+  return await apiRequest('/system/security/verify-signature', {
+    method: 'POST',
+    headers: {
+      'X-Signature': signature,
+      'X-Timestamp': String(timestamp),
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Seed realistic sample micro-transactions for immediate prototype demonstration
+ */
+export async function seedDemoTraffic() {
+  return await apiRequest('/system/security/demo/seed', {
+    method: 'POST',
   });
 }

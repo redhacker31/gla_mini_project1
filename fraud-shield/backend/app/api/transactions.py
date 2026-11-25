@@ -10,6 +10,7 @@ Implements:
 """
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
@@ -19,9 +20,17 @@ from app.schemas.transaction import (
     TransactionEvaluateRequest,
     TransactionEvaluateResponse,
 )
+from app.security.sanitization import sanitize_text
 from app.services.transaction_service import transaction_service
 
 router = APIRouter()
+
+
+class TransactionReviewRequest(BaseModel):
+    """Analyst manual review decision payload."""
+    decision: str = Field(..., description="APPROVE or REJECT")
+    analyst_note: str = Field(default="", max_length=240, description="Analyst review notes")
+    blacklist_recipient: bool = Field(default=False, description="Add recipient VPA to blacklist if rejecting")
 
 
 @router.post(
@@ -68,10 +77,18 @@ async def evaluate_transaction(
 async def list_transactions(
     limit: int = Query(default=50, ge=1, le=200, description="Maximum number of transactions to return"),
     user_id: Optional[str] = Query(default=None, description="Optional filter by user identifier"),
+    txn_status: Optional[str] = Query(default=None, alias="status", description="Optional filter by transaction status"),
+    risk_tier: Optional[str] = Query(default=None, description="Optional filter by risk tier (LOW, MEDIUM, HIGH)"),
     db: Session = Depends(get_db),
 ):
     """Retrieve evaluated transactions."""
-    txns = transaction_service.list_transactions(limit=limit, user_id=user_id, db=db)
+    txns = transaction_service.list_transactions(
+        limit=limit,
+        user_id=user_id,
+        status_filter=txn_status,
+        risk_tier=risk_tier,
+        db=db,
+    )
     return {
         "status": "success",
         "count": len(txns),
@@ -151,4 +168,49 @@ async def get_transaction(
     return {
         "status": "success",
         "data": txn,
+    }
+
+
+@router.post(
+    "/{txn_id}/review",
+    summary="Submit Fraud Analyst manual review decision",
+    description="Allows an analyst to approve a false positive or confirm fraud/rejection on a transaction and log the decision.",
+    responses={
+        200: {"description": "Review decision recorded and persisted."},
+        400: {"description": "Invalid review decision or input."},
+        404: {"description": "Transaction ID not found."},
+    },
+)
+async def review_transaction(
+    txn_id: str,
+    payload: TransactionReviewRequest,
+    db: Session = Depends(get_db),
+):
+    """Execute manual analyst override/review for a transaction."""
+    try:
+        clean_note = sanitize_text(payload.analyst_note, field_name="analyst_note", max_length=240, allow_empty=True)
+        review_result = transaction_service.review_transaction(
+            txn_id=txn_id,
+            decision=payload.decision,
+            analyst_note=clean_note,
+            blacklist_recipient=payload.blacklist_recipient,
+            db=db,
+        )
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(ve),
+        )
+
+    if not review_result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Transaction with ID '{txn_id}' not found.",
+        )
+
+    return {
+        "status": "success",
+        "message": f"Transaction transitioned from {review_result['old_status']} to {review_result['new_status']}.",
+        "data": review_result["transaction"],
+        "blacklisted_vpa": review_result["blacklisted_vpa"],
     }

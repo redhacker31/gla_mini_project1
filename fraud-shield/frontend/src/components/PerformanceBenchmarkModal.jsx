@@ -72,7 +72,7 @@ export default function PerformanceBenchmarkModal({ onClose, onNotify }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Zap size={20} color="#a855f7" />
             <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#fff', fontWeight: 600 }}>
-              Phase 12: Sub-50ms SLA Concurrency & Latency Profiler
+              Sub-50ms SLA Concurrency &amp; Latency Profiler
             </h3>
           </div>
           <button 

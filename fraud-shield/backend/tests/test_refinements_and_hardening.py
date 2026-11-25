@@ -102,3 +102,87 @@ def test_dashboard_metrics_aggregation_speed_and_format():
     assert "low" in data["risk_distribution"]
     assert "medium" in data["risk_distribution"]
     assert "high" in data["risk_distribution"]
+
+
+def test_analyst_review_override_and_audit():
+    """Verify analyst manual review transitions status and appends audit record."""
+    eval_resp = client.post(
+        f"{settings.API_V1_STR}/transactions/evaluate",
+        json={
+            "user_id": "usr_review_test",
+            "amount": 350.0,
+            "recipient_vpa": "blacklisted_mule99@upi",
+            "merchant_category": "p2p",
+            "channel": "UPI_APP",
+        },
+    )
+    assert eval_resp.status_code == 200
+    txn_id = eval_resp.json()["txn_id"]
+    assert eval_resp.json()["status"] == "SECURITY_FLAGGED"
+
+    # Override to APPROVED via analyst review
+    rev_resp = client.post(
+        f"{settings.API_V1_STR}/transactions/{txn_id}/review",
+        json={"decision": "APPROVE", "analyst_note": "Verified customer callback"},
+    )
+    assert rev_resp.status_code == 200
+    rev_data = rev_resp.json()
+    assert rev_data["data"]["status"] == "APPROVED"
+
+    # Confirm persisted status via GET
+    get_resp = client.get(f"{settings.API_V1_STR}/transactions/{txn_id}")
+    assert get_resp.status_code == 200
+    assert get_resp.json()["data"]["status"] == "APPROVED"
+
+
+def test_dynamic_blacklist_and_threshold_policy():
+    """Verify live blacklist management and adaptive threshold updates."""
+    test_vpa = "temp_fraud_test99@upi"
+    orig_low = risk_engine_service.threshold_low
+    orig_high = risk_engine_service.threshold_high
+
+    try:
+        # 1. Add VPA to blacklist
+        add_resp = client.post(
+            f"{settings.API_V1_STR}/system/security/blacklist",
+            json={"vpa": test_vpa, "reason": "Automated unit test"},
+        )
+        assert add_resp.status_code == 200
+        assert test_vpa in add_resp.json()["blacklist"]
+
+        # 2. Verify GET returns VPA
+        list_resp = client.get(f"{settings.API_V1_STR}/system/security/blacklist")
+        assert list_resp.status_code == 200
+        assert test_vpa in list_resp.json()["blacklist"]
+
+        # 3. Remove VPA from blacklist
+        del_resp = client.delete(f"{settings.API_V1_STR}/system/security/blacklist/{test_vpa}")
+        assert del_resp.status_code == 200
+        assert test_vpa not in del_resp.json()["blacklist"]
+
+        # 4. Tune thresholds and verify /health reflects live values
+        patch_resp = client.patch(
+            f"{settings.API_V1_STR}/system/security/thresholds",
+            json={"threshold_low": 0.40, "threshold_high": 0.75},
+        )
+        assert patch_resp.status_code == 200
+        health_resp = client.get(f"{settings.API_V1_STR}/health")
+        assert health_resp.json()["risk_thresholds"]["low"] == 0.40
+        assert health_resp.json()["risk_thresholds"]["high"] == 0.75
+    finally:
+        risk_engine_service.remove_from_blacklist(test_vpa)
+        risk_engine_service.threshold_low = orig_low
+        risk_engine_service.threshold_high = orig_high
+
+
+def test_demo_seed_and_filtered_transaction_list():
+    """Verify curated demo seed endpoint and risk_tier query filtering."""
+    seed_resp = client.post(f"{settings.API_V1_STR}/system/security/demo/seed")
+    assert seed_resp.status_code == 200
+    assert seed_resp.json()["seeded_count"] >= 8
+
+    high_resp = client.get(f"{settings.API_V1_STR}/transactions?risk_tier=HIGH&limit=20")
+    assert high_resp.status_code == 200
+    high_data = high_resp.json()["data"]
+    assert len(high_data) >= 1
+    assert all(item["risk_tier"] == "HIGH" for item in high_data)

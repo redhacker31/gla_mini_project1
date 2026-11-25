@@ -197,7 +197,7 @@ export default function ExplainabilityStudio({
   };
 
   return (
-    <div className="card" style={{ marginBottom: '1.5rem' }}>
+    <div id="explainability-studio" className="card" style={{ marginBottom: '1.5rem' }}>
       {/* Header */}
       <div style={{
         display: 'flex',
@@ -212,7 +212,8 @@ export default function ExplainabilityStudio({
         <div>
           <div className="card-title" style={{ margin: 0 }}>
             <Compass size={18} color="var(--accent-cyan)" />
-            <span>Phase 11: Explainability Studio & What-If Scenario Simulator</span>
+            <span>Explainability Lab &amp; What-If Scenario Simulator</span>
+            {loading && <RefreshCw size={14} className="spin" color="var(--accent-cyan)" />}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
             {selectedTxnId ? (

@@ -6,17 +6,22 @@ and inspect token bucket rate limiting telemetry.
 from datetime import datetime, timezone
 import json
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.database.session import get_db
+from app.repositories.audit_repo import audit_repo
 from app.security.hmac_auth import (
     generate_gateway_signature,
     require_gateway_signature,
     verify_signature,
 )
 from app.security.rate_limiter import rate_limiter
+from app.security.sanitization import sanitize_text, validate_vpa
+from app.services.risk_engine import risk_engine_service
 
 router = APIRouter()
 
@@ -103,4 +108,178 @@ async def verify_gateway_request(
         "timestamp": auth_data["timestamp"],
         "signature": auth_data["signature"],
         "message": "HMAC-SHA256 signature verified in constant time. Anti-replay check passed.",
+    }
+
+
+class BlacklistVpaRequest(BaseModel):
+    """Payload to register a VPA on the active threat blacklist."""
+    vpa: str = Field(..., min_length=3, max_length=100, description="VPA handle to blacklist (e.g. fraud_mule@upi)")
+    reason: str = Field(default="Analyst threat intelligence registration", max_length=200)
+
+
+class ThresholdUpdateRequest(BaseModel):
+    """Payload to dynamically tune composite risk tier thresholds."""
+    threshold_low: float = Field(..., ge=0.10, le=0.75, description="Boundary between LOW and MEDIUM tiers")
+    threshold_high: float = Field(..., ge=0.35, le=0.95, description="Boundary between MEDIUM and HIGH tiers")
+
+
+@router.get(
+    "/blacklist",
+    summary="List Active Blacklisted VPAs & Risk Thresholds",
+    description="Retrieves all currently enforced blacklist VPAs and live operational risk tier thresholds.",
+)
+async def get_blacklist_and_policy():
+    """Retrieve active threat blacklist and composite risk engine policy."""
+    return {
+        "status": "success",
+        "blacklist_count": len(risk_engine_service.blacklist),
+        "blacklist": sorted(risk_engine_service.blacklist),
+        "thresholds": {
+            "low": risk_engine_service.threshold_low,
+            "high": risk_engine_service.threshold_high,
+        },
+    }
+
+
+@router.post(
+    "/blacklist",
+    summary="Add Recipient VPA to Blacklist",
+    description="Adds a fraudulent VPA to the live Risk Engine blacklist and records an audit event.",
+)
+async def add_blacklist_vpa(
+    payload: BlacklistVpaRequest,
+    db: Session = Depends(get_db),
+):
+    """Register a VPA in the live blacklist."""
+    try:
+        clean_vpa = validate_vpa(payload.vpa)
+        clean_reason = sanitize_text(payload.reason, field_name="reason", max_length=200, allow_empty=True)
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
+    already_present = clean_vpa in risk_engine_service.blacklist
+    risk_engine_service.add_to_blacklist(clean_vpa)
+
+    if not already_present:
+        audit_repo.append_log(
+            db=db,
+            entity_type="SECURITY_POLICY",
+            entity_id=clean_vpa,
+            action="BLACKLIST_ADDED",
+            actor="ANALYST",
+            details={"vpa": clean_vpa, "reason": clean_reason or "Added via Security Console"},
+        )
+        db.commit()
+
+    return {
+        "status": "success",
+        "added": not already_present,
+        "vpa": clean_vpa,
+        "blacklist": sorted(risk_engine_service.blacklist),
+    }
+
+
+@router.delete(
+    "/blacklist/{vpa:path}",
+    summary="Remove VPA from Blacklist",
+    description="Removes a VPA from the live Risk Engine blacklist and records an audit event.",
+)
+async def remove_blacklist_vpa(
+    vpa: str,
+    db: Session = Depends(get_db),
+):
+    """Remove a VPA from the live blacklist."""
+    clean_vpa = vpa.strip().lower()
+    if clean_vpa not in risk_engine_service.blacklist:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"VPA '{clean_vpa}' is not present in the active blacklist.",
+        )
+
+    risk_engine_service.remove_from_blacklist(clean_vpa)
+    audit_repo.append_log(
+        db=db,
+        entity_type="SECURITY_POLICY",
+        entity_id=clean_vpa,
+        action="BLACKLIST_REMOVED",
+        actor="ANALYST",
+        details={"vpa": clean_vpa},
+    )
+    db.commit()
+
+    return {
+        "status": "success",
+        "removed": clean_vpa,
+        "blacklist": sorted(risk_engine_service.blacklist),
+    }
+
+
+@router.patch(
+    "/thresholds",
+    summary="Tune Operational Risk Thresholds",
+    description="Updates LOW/MEDIUM and MEDIUM/HIGH risk score boundaries dynamically in the Risk Engine.",
+)
+async def update_risk_thresholds(
+    payload: ThresholdUpdateRequest,
+    db: Session = Depends(get_db),
+):
+    """Dynamically adjust 3-tier composite risk thresholds."""
+    if payload.threshold_low >= payload.threshold_high - 0.05:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="threshold_low must be at least 0.05 below threshold_high.",
+        )
+
+    old_low = risk_engine_service.threshold_low
+    old_high = risk_engine_service.threshold_high
+    risk_engine_service.threshold_low = round(payload.threshold_low, 2)
+    risk_engine_service.threshold_high = round(payload.threshold_high, 2)
+
+    audit_repo.append_log(
+        db=db,
+        entity_type="SECURITY_POLICY",
+        entity_id="RISK_THRESHOLDS",
+        action="POLICY_UPDATED",
+        actor="ANALYST",
+        details={
+            "old_low": old_low,
+            "new_low": risk_engine_service.threshold_low,
+            "old_high": old_high,
+            "new_high": risk_engine_service.threshold_high,
+        },
+    )
+    db.commit()
+
+    return {
+        "status": "success",
+        "thresholds": {
+            "low": risk_engine_service.threshold_low,
+            "high": risk_engine_service.threshold_high,
+        },
+    }
+
+
+@router.post(
+    "/demo/seed",
+    summary="Seed Curated Micro-Transaction Demo Traffic",
+    description="Populates a realistic mix of benign UPI payments, a velocity OTP challenge, and a blacklisted mule freeze.",
+)
+async def seed_demo_traffic():
+    """Populate representative Indian micro-transaction traffic for live prototype testing."""
+    from app.schemas.simulation import ScenarioType
+    from app.services.simulation_service import simulation_service
+
+    routine_batch = simulation_service.trigger_scenario(ScenarioType.ROUTINE, count=4)
+    burst_batch = simulation_service.trigger_scenario(ScenarioType.VELOCITY_BURST, count=3)
+    blacklist_batch = simulation_service.trigger_scenario(ScenarioType.BLACKLIST_HIT, count=1)
+
+    total = (
+        routine_batch.transactions_generated
+        + burst_batch.transactions_generated
+        + blacklist_batch.transactions_generated
+    )
+    return {
+        "status": "success",
+        "seeded_count": total,
+        "message": f"Seeded {total} realistic transactions (benign commerce, Step-Up OTP challenge, and threat freeze).",
     }

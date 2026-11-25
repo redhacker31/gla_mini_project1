@@ -1,27 +1,32 @@
 import React from 'react';
-import { 
-  Shield, 
-  RefreshCw, 
-  Database, 
-  ExternalLink, 
+import {
+  Shield,
+  RefreshCw,
+  Database,
+  ExternalLink,
   Activity,
-  CheckCircle2,
-  AlertCircle
+  Sparkles,
 } from 'lucide-react';
 
-export default function Navbar({ 
-  health, 
-  loading, 
-  onRefresh, 
-  autoRefresh, 
+export default function Navbar({
+  health,
+  loading,
+  onRefresh,
+  autoRefresh,
   setAutoRefresh,
   onOpenAuditModal,
-  onOpenBenchmarkModal
+  onOpenBenchmarkModal,
+  onSeedDemo,
+  seedingDemo,
 }) {
+  const isChecking = !health || health?.status === 'checking';
   const isHealthy = health?.status === 'healthy';
-  const docsUrl = typeof window !== 'undefined' && window.location.port === '5173' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? 'http://127.0.0.1:8000/docs'
-    : '/docs';
+  const docsUrl =
+    typeof window !== 'undefined' &&
+    window.location.port === '5173' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? 'http://127.0.0.1:8000/docs'
+      : '/docs';
 
   return (
     <header className="header">
@@ -30,36 +35,39 @@ export default function Navbar({
         <div>
           <div className="logo-title">
             FRAUD SHIELD
-            <span className="logo-badge">CAPSTONE • TEAM 40</span>
+            <span className="logo-badge">REAL-TIME SOC • TEAM 40</span>
           </div>
           <div className="logo-subtitle">
-            Real-Time Anomaly Detection for Digital Micro-Transactions &lt; INR 1,000
+            Edge-Compatible Anomaly Detection &amp; Step-Up Auth for Micro-Transactions &lt; ₹1,000
           </div>
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
         {/* API Health Badge */}
-        <div className={`status-badge ${isHealthy ? 'status-online' : 'status-offline'}`}>
+        <div
+          className={`status-badge ${
+            isHealthy ? 'status-online' : isChecking ? 'status-checking' : 'status-offline'
+          }`}
+        >
           <span className="pulse-dot"></span>
-          <span>{isHealthy ? 'API Gateway Online' : 'API Gateway Offline'}</span>
+          <span>
+            {isHealthy ? 'Gateway Online' : isChecking ? 'Connecting...' : 'Gateway Offline'}
+          </span>
         </div>
 
-        {/* Database WAL badge */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.35rem',
-          fontSize: '0.75rem',
-          color: 'var(--text-muted)',
-          background: 'rgba(30, 41, 59, 0.6)',
-          padding: '0.25rem 0.6rem',
-          borderRadius: '4px',
-          border: '1px solid var(--border-color)',
-        }}>
-          <Database size={13} color="var(--accent-cyan)" />
-          <span>SQLite WAL</span>
-        </div>
+        {/* Seed Demo Data */}
+        {onSeedDemo && (
+          <button
+            onClick={onSeedDemo}
+            disabled={seedingDemo}
+            className="btn btn-outline btn-sm"
+            title="Populate realistic sample UPI transactions & attacks"
+          >
+            <Sparkles size={13} color="#fbbf24" className={seedingDemo ? 'spin' : ''} />
+            <span>{seedingDemo ? 'Seeding...' : 'Load Demo Traffic'}</span>
+          </button>
+        )}
 
         {/* Audit Ledger Verify Shortcut */}
         <button
@@ -71,7 +79,7 @@ export default function Navbar({
           <span>Audit Ledger</span>
         </button>
 
-        {/* Phase 12: SLA Benchmark Shortcut */}
+        {/* SLA Benchmark Shortcut */}
         <button
           onClick={onOpenBenchmarkModal}
           className="btn btn-outline btn-sm"
@@ -85,14 +93,14 @@ export default function Navbar({
         <button
           onClick={() => setAutoRefresh(!autoRefresh)}
           className={`btn btn-sm ${autoRefresh ? 'btn-success' : 'btn-outline'}`}
-          title="Toggle live 3-second polling"
+          title="Toggle live auto-polling"
         >
-          <Activity size={13} className={autoRefresh ? 'spin' : ''} />
-          <span>{autoRefresh ? 'Live Auto-Polling ON' : 'Auto-Poll Paused'}</span>
+          <Database size={13} />
+          <span>{autoRefresh ? 'Live Sync ON' : 'Sync Paused'}</span>
         </button>
 
         {/* Manual Refresh Button */}
-        <button 
+        <button
           onClick={onRefresh}
           disabled={loading}
           className="btn btn-outline btn-sm"

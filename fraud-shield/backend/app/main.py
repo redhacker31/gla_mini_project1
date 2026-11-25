@@ -65,14 +65,15 @@ def create_application() -> FastAPI:
     )
     async def health_check():
         """Verify that the FastAPI service and submodules are alive."""
+        from app.services.risk_engine import risk_engine_service
         return {
             "status": "healthy",
             "service": settings.APP_NAME,
             "version": settings.APP_VERSION,
             "environment": settings.ENVIRONMENT,
             "risk_thresholds": {
-                "low": settings.RISK_THRESHOLD_LOW,
-                "high": settings.RISK_THRESHOLD_HIGH,
+                "low": risk_engine_service.threshold_low,
+                "high": risk_engine_service.threshold_high,
             },
             "ml_model": {
                 "loaded": anomaly_detector_service.is_loaded,

@@ -1,28 +1,41 @@
 import React, { useState } from 'react';
-import { 
-  History, 
-  RefreshCw, 
-  Search, 
-  ExternalLink, 
-  KeyRound, 
-  Clock, 
-  CheckCircle2, 
-  AlertTriangle, 
-  ShieldAlert,
-  ArrowUpDown
+import {
+  History,
+  RefreshCw,
+  Search,
+  KeyRound,
+  Download,
+  Eye,
+  Compass,
 } from 'lucide-react';
 
-export default function LiveTransactionFeed({ 
-  transactions, 
-  loading, 
-  onRefresh, 
+export default function LiveTransactionFeed({
+  transactions = [],
+  loading,
+  onRefresh,
   onOpenOtpModal,
-  onSelectTxnForExplain
+  onSelectTxnForExplain,
+  onInspectTxn,
 }) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [tierFilter, setTierFilter] = useState('ALL');
+
+  const statusCounts = transactions.reduce(
+    (acc, tx) => {
+      acc.ALL += 1;
+      if (tx.status && acc[tx.status] !== undefined) acc[tx.status] += 1;
+      return acc;
+    },
+    { ALL: 0, APPROVED: 0, PENDING_VERIFICATION: 0, SECURITY_FLAGGED: 0, REJECTED: 0 }
+  );
 
   const filtered = transactions.filter((tx) => {
+    const tier = tx.risk_tier ?? tx.risk_assessment?.risk_tier ?? 'LOW';
+    if (statusFilter !== 'ALL' && tx.status !== statusFilter) return false;
+    if (tierFilter !== 'ALL' && tier !== tierFilter) return false;
     if (!searchTerm) return true;
+
     const term = searchTerm.toLowerCase();
     const vpa = (tx.recipient_vpa_masked || tx.recipient_vpa || '').toLowerCase();
     const user = (tx.user_hash || tx.user_id || '').toLowerCase();
@@ -36,38 +49,101 @@ export default function LiveTransactionFeed({
     );
   });
 
+  const handleExportCsv = () => {
+    const headers = ['Timestamp', 'Txn ID', 'User Hash', 'Amount INR', 'Recipient VPA', 'Composite Score', 'Risk Tier', 'Status', 'Latency (ms)'];
+    const rows = filtered.map((tx) => {
+      const score = tx.composite_score ?? tx.risk_assessment?.composite_score ?? 0;
+      const tier = tx.risk_tier ?? tx.risk_assessment?.risk_tier ?? 'LOW';
+      const latency = tx.latency_ms ?? tx.risk_assessment?.latency_ms ?? 0;
+      return [
+        tx.timestamp || tx.created_at || '',
+        tx.txn_id || '',
+        tx.user_hash || tx.user_id || '',
+        (tx.amount ?? 0).toFixed(2),
+        tx.recipient_vpa_masked || tx.recipient_vpa || '',
+        score.toFixed(4),
+        tier,
+        tx.status || '',
+        latency.toFixed(2),
+      ].map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',');
+    });
+
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `fraud_shield_ledger_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const statusTabs = [
+    { key: 'ALL', label: 'All' },
+    { key: 'APPROVED', label: 'Approved' },
+    { key: 'PENDING_VERIFICATION', label: 'Pending OTP' },
+    { key: 'SECURITY_FLAGGED', label: 'Flagged' },
+    { key: 'REJECTED', label: 'Rejected' },
+  ];
+
   return (
     <div className="card">
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '1rem',
-        marginBottom: '1rem',
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem',
+          marginBottom: '0.85rem',
+        }}
+      >
         <div className="card-title" style={{ margin: 0 }}>
           <History size={18} color="var(--accent-cyan)" />
           <span>Real-Time Evaluated Micro-Transactions Stream</span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
           {/* Search Box */}
-          <div style={{ position: 'relative', minWidth: '220px' }}>
-            <Search 
-              size={14} 
-              color="var(--text-dim)" 
-              style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)' }} 
+          <div style={{ position: 'relative', minWidth: '210px' }}>
+            <Search
+              size={14}
+              color="var(--text-dim)"
+              style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)' }}
             />
             <input
               type="text"
-              placeholder="Filter by txn ID, VPA, status..."
+              placeholder="Search txn ID, VPA, status..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="form-input"
-              style={{ paddingLeft: '2rem', fontSize: '0.75rem', padding: '0.35rem 0.65rem 0.35rem 2rem' }}
+              style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem 0.35rem 2rem' }}
             />
           </div>
+
+          <select
+            value={tierFilter}
+            onChange={(e) => setTierFilter(e.target.value)}
+            className="form-select"
+            style={{ width: 'auto', fontSize: '0.75rem', padding: '0.35rem 0.6rem' }}
+          >
+            <option value="ALL">All Tiers</option>
+            <option value="LOW">Low Risk</option>
+            <option value="MEDIUM">Medium Risk</option>
+            <option value="HIGH">High Risk</option>
+          </select>
+
+          <button
+            onClick={handleExportCsv}
+            disabled={filtered.length === 0}
+            className="btn btn-outline btn-sm"
+            title="Download visible ledger rows as CSV"
+          >
+            <Download size={12} />
+            <span>Export CSV</span>
+          </button>
 
           <button
             onClick={onRefresh}
@@ -75,13 +151,41 @@ export default function LiveTransactionFeed({
             className="btn btn-outline btn-sm"
           >
             <RefreshCw size={12} className={loading ? 'spin' : ''} />
-            <span>Refresh Feed</span>
+            <span>Refresh</span>
           </button>
         </div>
       </div>
 
+      {/* Status Filter Pills */}
+      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.9rem' }}>
+        {statusTabs.map((tab) => {
+          const active = statusFilter === tab.key;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setStatusFilter(tab.key)}
+              className={`btn btn-sm ${active ? 'btn-primary' : 'btn-outline'}`}
+              style={{ padding: '0.25rem 0.6rem', fontSize: '0.72rem' }}
+            >
+              <span>{tab.label}</span>
+              <span
+                style={{
+                  background: active ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.08)',
+                  padding: '0.05rem 0.35rem',
+                  borderRadius: '999px',
+                  fontSize: '0.66rem',
+                }}
+              >
+                {statusCounts[tab.key] ?? 0}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Table Container */}
-      <div className="table-container" style={{ maxHeight: '420px', overflowY: 'auto' }}>
+      <div className="table-container" style={{ maxHeight: '440px', overflowY: 'auto' }}>
         <table className="data-table">
           <thead>
             <tr>
@@ -90,11 +194,11 @@ export default function LiveTransactionFeed({
               <th>User (DPDP Hash)</th>
               <th>Amount (INR)</th>
               <th>Recipient VPA</th>
-              <th>Composite Score S(x)</th>
-              <th>Risk Tier</th>
+              <th>Score S(x)</th>
+              <th>Tier</th>
               <th>Status</th>
               <th>Latency</th>
-              <th>Action</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -108,7 +212,12 @@ export default function LiveTransactionFeed({
                 const userDisplay = tx.user_hash || tx.user_id || 'masked';
 
                 return (
-                  <tr key={tx.txn_id}>
+                  <tr
+                    key={tx.txn_id}
+                    onClick={() => onInspectTxn?.(tx)}
+                    style={{ cursor: onInspectTxn ? 'pointer' : 'default' }}
+                    title="Click row to inspect details & analyst review"
+                  >
                     <td style={{ color: 'var(--text-dim)', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                       {timeStr ? new Date(timeStr).toLocaleTimeString() : 'Just now'}
                     </td>
@@ -129,33 +238,42 @@ export default function LiveTransactionFeed({
                       {recipientVpa}
                     </td>
                     <td>
-                      <span style={{
-                        fontWeight: 700,
-                        fontFamily: 'Consolas, monospace',
-                        color: tier === 'LOW' ? 'var(--tier-low)' : tier === 'MEDIUM' ? 'var(--tier-med)' : 'var(--tier-high)',
-                      }}>
+                      <span
+                        style={{
+                          fontWeight: 700,
+                          fontFamily: 'Consolas, monospace',
+                          color: tier === 'LOW' ? 'var(--tier-low)' : tier === 'MEDIUM' ? 'var(--tier-med)' : 'var(--tier-high)',
+                        }}
+                      >
                         {score.toFixed(4)}
                       </span>
                     </td>
                     <td>
-                      <span className={`badge ${
-                        tier === 'LOW' ? 'badge-low' : tier === 'MEDIUM' ? 'badge-med' : 'badge-high'
-                      }`}>
+                      <span
+                        className={`badge ${
+                          tier === 'LOW' ? 'badge-low' : tier === 'MEDIUM' ? 'badge-med' : 'badge-high'
+                        }`}
+                      >
                         {tier}
                       </span>
                     </td>
                     <td>
-                      <span className={`badge ${
-                        tx.status === 'APPROVED' ? 'badge-approved' :
-                        tx.status === 'PENDING_VERIFICATION' ? 'badge-pending' : 'badge-rejected'
-                      }`}>
+                      <span
+                        className={`badge ${
+                          tx.status === 'APPROVED'
+                            ? 'badge-approved'
+                            : tx.status === 'PENDING_VERIFICATION'
+                            ? 'badge-pending'
+                            : 'badge-rejected'
+                        }`}
+                      >
                         {tx.status}
                       </span>
                     </td>
-                    <td style={{ fontSize: '0.75rem', color: latency < 50 ? '#34d399' : '#f87171' }}>
+                    <td style={{ fontSize: '0.75rem', color: latency < 50 ? '#34d399' : '#f87171', whiteSpace: 'nowrap' }}>
                       {latency.toFixed(1)} ms
                     </td>
-                    <td>
+                    <td onClick={(e) => e.stopPropagation()}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                         {tx.status === 'PENDING_VERIFICATION' && tx.session_id && (
                           <button
@@ -169,11 +287,21 @@ export default function LiveTransactionFeed({
                           </button>
                         )}
                         <button
+                          onClick={() => onInspectTxn?.(tx)}
+                          className="btn btn-outline btn-sm"
+                          style={{ padding: '0.2rem 0.45rem', fontSize: '0.7rem' }}
+                          title="Inspect & Review Transaction"
+                        >
+                          <Eye size={11} />
+                          <span>Review</span>
+                        </button>
+                        <button
                           onClick={() => onSelectTxnForExplain?.(tx.txn_id)}
                           className="btn btn-outline btn-sm"
                           style={{ padding: '0.2rem 0.45rem', fontSize: '0.7rem' }}
                           title="Inspect AI/ML & Rule Explainability Waterfall"
                         >
+                          <Compass size={11} />
                           <span>Explain</span>
                         </button>
                       </div>
@@ -184,7 +312,7 @@ export default function LiveTransactionFeed({
             ) : (
               <tr>
                 <td colSpan={10} style={{ textAlign: 'center', color: 'var(--text-dim)', padding: '2rem' }}>
-                  {loading ? 'Refreshing transaction stream...' : 'No transactions matching query.'}
+                  {loading ? 'Refreshing transaction stream...' : 'No transactions match the current filter.'}
                 </td>
               </tr>
             )}
@@ -192,15 +320,19 @@ export default function LiveTransactionFeed({
         </table>
       </div>
 
-      <div style={{
-        marginTop: '0.75rem',
-        display: 'flex',
-        justifyContent: 'space-between',
-        fontSize: '0.75rem',
-        color: 'var(--text-dim)',
-      }}>
-        <span>Showing {filtered.length} of {transactions.length} records</span>
-        <span>Storage: SQLite 3 with Write-Ahead Logging (WAL)</span>
+      <div
+        style={{
+          marginTop: '0.75rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '0.5rem',
+          fontSize: '0.75rem',
+          color: 'var(--text-dim)',
+        }}
+      >
+        <span>Showing {filtered.length} of {transactions.length} loaded records</span>
+        <span>Storage: SQLite 3 (WAL Mode) • Click any row for Analyst Review</span>
       </div>
     </div>
   );

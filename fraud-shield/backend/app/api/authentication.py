@@ -70,12 +70,11 @@ async def verify_otp(
             detail=result["message"],
         )
 
-    # Synchronize in-memory cache in transaction_service if updated
+    # Synchronize in-memory cache in transaction_service (DB status + audit already committed by otp_service)
     if result.get("status") in ["APPROVED", "REJECTED", "EXPIRED"]:
-        transaction_service.update_transaction_status(
+        transaction_service.sync_cache_status(
             txn_id=result["txn_id"],
             new_status=result["status"],
-            db=db,
         )
 
     return OTPVerifyResponse(

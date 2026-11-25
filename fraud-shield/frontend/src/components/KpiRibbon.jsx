@@ -20,6 +20,8 @@ export default function KpiRibbon({ metrics, health }) {
   const challengeRate = metrics?.challenge_rate ?? (total > 0 ? ((challenged / total) * 100).toFixed(1) : '0.0');
   const blockRate = metrics?.rejection_rate ?? (total > 0 ? ((blocked / total) * 100).toFixed(1) : '0.0');
 
+  const lowT = (health?.risk_thresholds?.low ?? 0.45).toFixed(2);
+  const highT = (health?.risk_thresholds?.high ?? 0.80).toFixed(2);
   const p95Latency = metrics?.p95_latency_ms ?? 11.64;
   const avgLatency = metrics?.avg_latency_ms ?? 8.42;
   const auditHeight = metrics?.audit_block_height ?? 0;
@@ -60,7 +62,7 @@ export default function KpiRibbon({ metrics, health }) {
         </div>
         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.3rem', display: 'flex', justifyContent: 'space-between' }}>
           <span>{approved} txns passed</span>
-          <span style={{ color: 'var(--tier-low)' }}>S(x) &lt; 0.45</span>
+          <span style={{ color: 'var(--tier-low)' }}>S(x) &lt; {lowT}</span>
         </div>
       </div>
 
@@ -77,7 +79,7 @@ export default function KpiRibbon({ metrics, health }) {
         </div>
         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.3rem', display: 'flex', justifyContent: 'space-between' }}>
           <span>{challenged} OTP challenges</span>
-          <span style={{ color: 'var(--tier-med)' }}>0.45 &le; S &lt; 0.80</span>
+          <span style={{ color: 'var(--tier-med)' }}>{lowT} &le; S &lt; {highT}</span>
         </div>
       </div>
 
@@ -94,7 +96,7 @@ export default function KpiRibbon({ metrics, health }) {
         </div>
         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.3rem', display: 'flex', justifyContent: 'space-between' }}>
           <span>{blocked} attacks thwarted</span>
-          <span style={{ color: 'var(--tier-high)' }}>S(x) &ge; 0.80</span>
+          <span style={{ color: 'var(--tier-high)' }}>S(x) &ge; {highT}</span>
         </div>
       </div>
 

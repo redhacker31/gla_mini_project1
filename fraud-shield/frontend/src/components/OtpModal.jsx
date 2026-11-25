@@ -26,8 +26,9 @@ export default function OtpModal({
   const [resultMessage, setResultMessage] = useState(null);
   const [resultStatus, setResultStatus] = useState(null); // 'APPROVED', 'ATTEMPT_FAILED', 'LOCKED'
   const [timeLeft, setTimeLeft] = useState(180);
+  const [sandboxOtp, setSandboxOtp] = useState(null);
 
-  // Load session information on mount
+  // Load session information & sandbox SMS preview on mount
   useEffect(() => {
     let mounted = true;
     async function loadInfo() {
@@ -39,13 +40,21 @@ export default function OtpModal({
             const expMs = new Date(info.expires_at).getTime();
             const nowMs = Date.now();
             const diffSec = Math.max(0, Math.floor((expMs - nowMs) / 1000));
-            if (diffSec > 0 && diffSec <= 180) {
+            if (diffSec >= 0 && diffSec <= 180) {
               setTimeLeft(diffSec);
             }
           }
         }
       } catch (err) {
         console.warn('Could not load session details:', err);
+      }
+      try {
+        const latest = await fetchLatestOtp(sessionId);
+        if (mounted && latest?.otp) {
+          setSandboxOtp(latest.otp);
+        }
+      } catch {
+        // Ignore if sandbox endpoint is disabled
       }
     }
     if (sessionId) {
@@ -129,6 +138,8 @@ export default function OtpModal({
     try {
       const resp = await resendOtp(sessionId);
       setTimeLeft(180);
+      const latest = await fetchLatestOtp(sessionId).catch(() => null);
+      if (latest?.otp) setSandboxOtp(latest.otp);
       onNotify?.(resp.message || 'Fresh OTP dispatched via SMS.', 'info');
     } catch (err) {
       onNotify?.(`Resend failed: ${err.message}`, 'error');
@@ -205,6 +216,40 @@ export default function OtpModal({
               </span>
             </div>
           </div>
+
+          {/* Simulated SMS Gateway Inbox Notification */}
+          {sandboxOtp && (
+            <div style={{
+              background: 'rgba(6, 182, 212, 0.1)',
+              border: '1px solid rgba(6, 182, 212, 0.35)',
+              borderRadius: '8px',
+              padding: '0.75rem 0.9rem',
+              marginBottom: '1rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '0.75rem',
+              fontSize: '0.76rem',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                <Smartphone size={16} color="var(--accent-cyan)" />
+                <div>
+                  <div style={{ color: 'var(--accent-cyan)', fontWeight: 700 }}>Simulated Telecom SMS Received</div>
+                  <div style={{ color: 'var(--text-muted)' }}>
+                    Your verification OTP is <strong style={{ color: '#fff', letterSpacing: '0.1em' }}>{sandboxOtp}</strong> (valid 3 min).
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOtpCode(sandboxOtp)}
+                className="btn btn-outline btn-sm"
+                style={{ whiteSpace: 'nowrap', borderColor: 'rgba(6, 182, 212, 0.5)', color: '#67e8f9' }}
+              >
+                Use Code
+              </button>
+            </div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleVerify}>

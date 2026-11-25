@@ -107,15 +107,15 @@ export default function RiskDistributionChart({ metrics, health }) {
         }}>
           <div>
             <div style={{ color: 'var(--tier-low)', fontWeight: 700 }}>{low}</div>
-            <div style={{ color: 'var(--text-dim)' }}>Low (&lt;0.45)</div>
+            <div style={{ color: 'var(--text-dim)' }}>Low (&lt;{(health?.risk_thresholds?.low ?? 0.45).toFixed(2)})</div>
           </div>
           <div>
             <div style={{ color: 'var(--tier-med)', fontWeight: 700 }}>{med}</div>
-            <div style={{ color: 'var(--text-dim)' }}>Med (0.45-0.80)</div>
+            <div style={{ color: 'var(--text-dim)' }}>Med ({(health?.risk_thresholds?.low ?? 0.45).toFixed(2)}-{(health?.risk_thresholds?.high ?? 0.80).toFixed(2)})</div>
           </div>
           <div>
             <div style={{ color: 'var(--tier-high)', fontWeight: 700 }}>{high}</div>
-            <div style={{ color: 'var(--text-dim)' }}>High (&ge;0.80)</div>
+            <div style={{ color: 'var(--text-dim)' }}>High (&ge;{(health?.risk_thresholds?.high ?? 0.80).toFixed(2)})</div>
           </div>
         </div>
       </div>
@@ -125,28 +125,36 @@ export default function RiskDistributionChart({ metrics, health }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
           <div className="card-title" style={{ margin: 0 }}>
             <Cpu size={18} color="#38bdf8" />
-            <span>Phase 4 Model: Isolation Forest Core</span>
+            <span>{health?.ml_model?.algorithm || 'Isolation Forest'} Anomaly Core</span>
           </div>
-          <span className="badge badge-low" style={{ fontSize: '0.65rem' }}>Active Bundle</span>
+          <span className={`badge ${health?.ml_model?.loaded === false ? 'badge-high' : 'badge-low'}`} style={{ fontSize: '0.65rem' }}>
+            {health?.ml_model?.loaded === false ? 'Fallback Mode' : 'Active Bundle'}
+          </span>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
           <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Precision-Recall AUC</div>
-            <div style={{ fontSize: '1.35rem', fontWeight: 700, color: '#38bdf8' }}>0.8119</div>
-            <div style={{ fontSize: '0.65rem', color: '#34d399' }}>Target &ge; 0.75 (+0.0619)</div>
+            <div style={{ fontSize: '1.35rem', fontWeight: 700, color: '#38bdf8' }}>
+              {(health?.ml_model?.pr_auc ?? 0.8119).toFixed(4)}
+            </div>
+            <div style={{ fontSize: '0.65rem', color: '#34d399' }}>Target &ge; 0.75</div>
           </div>
 
           <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Recall @ 1% FPR</div>
-            <div style={{ fontSize: '1.35rem', fontWeight: 700, color: '#10b981' }}>80.56%</div>
-            <div style={{ fontSize: '0.65rem', color: '#34d399' }}>Target &ge; 75.0% (+5.56%)</div>
+            <div style={{ fontSize: '1.35rem', fontWeight: 700, color: '#10b981' }}>
+              {((health?.ml_model?.recall_at_1pct_fpr ?? 0.8056) * 100).toFixed(2)}%
+            </div>
+            <div style={{ fontSize: '0.65rem', color: '#34d399' }}>Target &ge; 75.0%</div>
           </div>
 
           <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>p95 Latency (Model)</div>
-            <div style={{ fontSize: '1.35rem', fontWeight: 700, color: '#a855f7' }}>11.64 ms</div>
-            <div style={{ fontSize: '0.65rem', color: '#34d399' }}>&le; 20.0ms Budget</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>p95 Latency (Live Gateway)</div>
+            <div style={{ fontSize: '1.35rem', fontWeight: 700, color: '#a855f7' }}>
+              {(metrics?.p95_latency_ms || health?.ml_model?.p95_latency_ms || 11.64).toFixed(2)} ms
+            </div>
+            <div style={{ fontSize: '0.65rem', color: '#34d399' }}>&le; 50.0ms SLA Budget</div>
           </div>
 
           <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
