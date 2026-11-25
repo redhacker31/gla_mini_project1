@@ -101,16 +101,16 @@ export default function LiveTransactionFeed({
         }}
       >
         <div className="card-title" style={{ margin: 0 }}>
-          <History size={18} color="var(--accent-cyan)" />
+          <History size={18} color="#E85D3F" />
           <span>Real-Time Evaluated Micro-Transactions Stream</span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
           {/* Search Box */}
-          <div style={{ position: 'relative', minWidth: '210px' }}>
+          <div style={{ position: 'relative', minWidth: '215px' }}>
             <Search
               size={14}
-              color="var(--text-dim)"
+              color="#8C7F70"
               style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)' }}
             />
             <input
@@ -119,7 +119,7 @@ export default function LiveTransactionFeed({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="form-input"
-              style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem 0.35rem 2rem' }}
+              style={{ fontSize: '0.75rem', padding: '0.38rem 0.65rem 0.38rem 2rem' }}
             />
           </div>
 
@@ -127,7 +127,7 @@ export default function LiveTransactionFeed({
             value={tierFilter}
             onChange={(e) => setTierFilter(e.target.value)}
             className="form-select"
-            style={{ width: 'auto', fontSize: '0.75rem', padding: '0.35rem 0.6rem' }}
+            style={{ width: 'auto', fontSize: '0.75rem', padding: '0.38rem 0.65rem' }}
           >
             <option value="ALL">All Tiers</option>
             <option value="LOW">Low Risk</option>
@@ -141,7 +141,7 @@ export default function LiveTransactionFeed({
             className="btn btn-outline btn-sm"
             title="Download visible ledger rows as CSV"
           >
-            <Download size={12} />
+            <Download size={12} color="#BE185D" />
             <span>Export CSV</span>
           </button>
 
@@ -157,7 +157,7 @@ export default function LiveTransactionFeed({
       </div>
 
       {/* Status Filter Pills */}
-      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.9rem' }}>
+      <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', marginBottom: '0.95rem' }}>
         {statusTabs.map((tab) => {
           const active = statusFilter === tab.key;
           return (
@@ -166,13 +166,14 @@ export default function LiveTransactionFeed({
               type="button"
               onClick={() => setStatusFilter(tab.key)}
               className={`btn btn-sm ${active ? 'btn-primary' : 'btn-outline'}`}
-              style={{ padding: '0.25rem 0.6rem', fontSize: '0.72rem' }}
+              style={{ padding: '0.28rem 0.65rem', fontSize: '0.72rem' }}
             >
               <span>{tab.label}</span>
               <span
                 style={{
-                  background: active ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.08)',
-                  padding: '0.05rem 0.35rem',
+                  background: active ? 'rgba(255, 255, 255, 0.25)' : 'var(--bg-secondary)',
+                  color: active ? '#FFFFFF' : 'var(--text-muted)',
+                  padding: '0.05rem 0.4rem',
                   borderRadius: '999px',
                   fontSize: '0.66rem',
                 }}
@@ -222,26 +223,26 @@ export default function LiveTransactionFeed({
                       {timeStr ? new Date(timeStr).toLocaleTimeString() : 'Just now'}
                     </td>
                     <td>
-                      <code style={{ fontSize: '0.75rem', color: '#fff' }}>
+                      <code style={{ fontSize: '0.75rem', color: 'var(--text-main)', fontWeight: 600 }}>
                         {tx.txn_id.substring(0, 8)}...
                       </code>
                     </td>
                     <td>
-                      <code style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>
+                      <code style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                         {userDisplay.substring(0, 10)}...
                       </code>
                     </td>
-                    <td style={{ fontWeight: 700, color: '#fff' }}>
+                    <td style={{ fontWeight: 700, color: 'var(--text-main)' }}>
                       ₹{tx.amount?.toFixed(2)}
                     </td>
-                    <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    <td className="mono" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                       {recipientVpa}
                     </td>
                     <td>
                       <span
+                        className="mono"
                         style={{
                           fontWeight: 700,
-                          fontFamily: 'Consolas, monospace',
                           color: tier === 'LOW' ? 'var(--tier-low)' : tier === 'MEDIUM' ? 'var(--tier-med)' : 'var(--tier-high)',
                         }}
                       >
@@ -270,7 +271,10 @@ export default function LiveTransactionFeed({
                         {tx.status}
                       </span>
                     </td>
-                    <td style={{ fontSize: '0.75rem', color: latency < 50 ? '#34d399' : '#f87171', whiteSpace: 'nowrap' }}>
+                    <td
+                      className="mono"
+                      style={{ fontSize: '0.75rem', fontWeight: 600, color: latency < 50 ? 'var(--tier-low)' : 'var(--tier-high)', whiteSpace: 'nowrap' }}
+                    >
                       {latency.toFixed(1)} ms
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
@@ -279,7 +283,7 @@ export default function LiveTransactionFeed({
                           <button
                             onClick={() => onOpenOtpModal(tx.session_id, tx.txn_id)}
                             className="btn btn-warning btn-sm"
-                            style={{ padding: '0.2rem 0.45rem', fontSize: '0.7rem' }}
+                            style={{ padding: '0.22rem 0.5rem', fontSize: '0.7rem' }}
                             title="Verify Out-of-Band Step-Up OTP"
                           >
                             <KeyRound size={11} />
@@ -289,7 +293,7 @@ export default function LiveTransactionFeed({
                         <button
                           onClick={() => onInspectTxn?.(tx)}
                           className="btn btn-outline btn-sm"
-                          style={{ padding: '0.2rem 0.45rem', fontSize: '0.7rem' }}
+                          style={{ padding: '0.22rem 0.5rem', fontSize: '0.7rem' }}
                           title="Inspect & Review Transaction"
                         >
                           <Eye size={11} />
@@ -297,8 +301,8 @@ export default function LiveTransactionFeed({
                         </button>
                         <button
                           onClick={() => onSelectTxnForExplain?.(tx.txn_id)}
-                          className="btn btn-outline btn-sm"
-                          style={{ padding: '0.2rem 0.45rem', fontSize: '0.7rem' }}
+                          className="btn btn-plum btn-sm"
+                          style={{ padding: '0.22rem 0.5rem', fontSize: '0.7rem' }}
                           title="Inspect AI/ML & Rule Explainability Waterfall"
                         >
                           <Compass size={11} />
@@ -322,7 +326,7 @@ export default function LiveTransactionFeed({
 
       <div
         style={{
-          marginTop: '0.75rem',
+          marginTop: '0.8rem',
           display: 'flex',
           justifyContent: 'space-between',
           flexWrap: 'wrap',

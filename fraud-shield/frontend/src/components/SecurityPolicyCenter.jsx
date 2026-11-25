@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  ShieldCheck,
   ShieldAlert,
   Lock,
   Key,
@@ -152,14 +151,14 @@ export default function SecurityPolicyCenter({ onPolicyUpdated, onNotify }) {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
             <div className="card-title" style={{ margin: 0 }}>
-              <ShieldAlert size={18} color="#ef4444" />
+              <ShieldAlert size={18} color="#DC2626" />
               <span>Live Threat Blacklist VPA Manager</span>
             </div>
             <span className="badge badge-high">{blacklist.length} Blocked VPAs</span>
           </div>
 
           <p className="card-desc" style={{ marginBottom: '1rem' }}>
-            Any transaction targeting these VPAs immediately triggers <code>RULE_BLACKLISTED_RECIPIENT</code> (+2.50 penalty) and freezes the transfer in sub-50ms.
+            Any transaction targeting these VPAs immediately triggers <code>RULE_BLACKLISTED_RECIPIENT</code> (+2.50 penalty) and freezes the transfer in sub-50ms. Changes persist in SQLite.
           </p>
 
           <form onSubmit={handleAddBlacklist} style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1rem' }}>
@@ -183,21 +182,19 @@ export default function SecurityPolicyCenter({ onPolicyUpdated, onNotify }) {
               placeholder="Optional threat intel note (e.g. Reported phishing QR handle)"
               value={newReason}
               onChange={(e) => setNewReason(e.target.value)}
-              style={{ fontSize: '0.78rem', padding: '0.4rem 0.65rem' }}
+              style={{ fontSize: '0.78rem', padding: '0.45rem 0.7rem' }}
             />
           </form>
 
           <div
+            className="sub-panel"
             style={{
               display: 'flex',
               flexWrap: 'wrap',
-              gap: '0.45rem',
+              gap: '0.5rem',
               maxHeight: '210px',
               overflowY: 'auto',
-              padding: '0.75rem',
-              background: 'rgba(15, 23, 42, 0.55)',
-              borderRadius: '8px',
-              border: '1px solid var(--border-color)',
+              padding: '0.8rem',
             }}
           >
             {blacklist.length > 0 ? (
@@ -208,12 +205,13 @@ export default function SecurityPolicyCenter({ onPolicyUpdated, onNotify }) {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '0.45rem',
-                    padding: '0.3rem 0.6rem',
-                    background: 'rgba(239, 68, 68, 0.14)',
-                    border: '1px solid rgba(239, 68, 68, 0.35)',
-                    borderRadius: '6px',
+                    padding: '0.32rem 0.65rem',
+                    background: 'var(--tier-high-bg)',
+                    border: '1px solid var(--tier-high-border)',
+                    borderRadius: '999px',
                     fontSize: '0.75rem',
-                    color: '#fca5a5',
+                    color: 'var(--tier-high)',
+                    fontWeight: 600,
                   }}
                 >
                   <code>{vpa}</code>
@@ -224,7 +222,7 @@ export default function SecurityPolicyCenter({ onPolicyUpdated, onNotify }) {
                     style={{
                       background: 'transparent',
                       border: 'none',
-                      color: '#f87171',
+                      color: '#DC2626',
                       cursor: 'pointer',
                       display: 'inline-flex',
                       padding: 0,
@@ -244,7 +242,7 @@ export default function SecurityPolicyCenter({ onPolicyUpdated, onNotify }) {
         <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
             <div className="card-title" style={{ margin: 0 }}>
-              <Sliders size={18} color="var(--accent-cyan)" />
+              <Sliders size={18} color="#E85D3F" />
               <span>3-Tier Risk Policy Threshold Tuner</span>
             </div>
             <button onClick={loadAll} disabled={loadingPolicy} className="btn btn-outline btn-sm">
@@ -262,30 +260,30 @@ export default function SecurityPolicyCenter({ onPolicyUpdated, onNotify }) {
             <div
               style={{
                 height: '16px',
-                borderRadius: '8px',
+                borderRadius: '999px',
                 overflow: 'hidden',
                 display: 'flex',
-                border: '1px solid var(--border-light)',
+                border: '1px solid var(--border-color)',
               }}
             >
               <div
-                style={{ width: `${threshLow * 100}%`, background: 'var(--tier-low)', transition: 'width 0.2s ease' }}
+                style={{ width: `${threshLow * 100}%`, background: '#10B981', transition: 'width 0.2s ease' }}
                 title={`Low Risk: 0.00 - ${threshLow.toFixed(2)}`}
               />
               <div
                 style={{
                   width: `${Math.max(0, (threshHigh - threshLow) * 100)}%`,
-                  background: 'var(--tier-med)',
+                  background: '#F59E0B',
                   transition: 'width 0.2s ease',
                 }}
                 title={`Medium Risk: ${threshLow.toFixed(2)} - ${threshHigh.toFixed(2)}`}
               />
               <div
-                style={{ width: `${Math.max(0, (1 - threshHigh) * 100)}%`, background: 'var(--tier-high)', transition: 'width 0.2s ease' }}
+                style={{ width: `${Math.max(0, (1 - threshHigh) * 100)}%`, background: '#EF4444', transition: 'width 0.2s ease' }}
                 title={`High Risk: ${threshHigh.toFixed(2)} - 1.00`}
               />
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginTop: '0.35rem', color: 'var(--text-muted)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginTop: '0.4rem', fontWeight: 700 }}>
               <span style={{ color: 'var(--tier-low)' }}>LOW (&lt; {threshLow.toFixed(2)})</span>
               <span style={{ color: 'var(--tier-med)' }}>OTP CHALLENGE ({threshLow.toFixed(2)} – {threshHigh.toFixed(2)})</span>
               <span style={{ color: 'var(--tier-high)' }}>BLOCK (&ge; {threshHigh.toFixed(2)})</span>
@@ -294,8 +292,8 @@ export default function SecurityPolicyCenter({ onPolicyUpdated, onNotify }) {
 
           <div className="form-group">
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.25rem' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Low / Medium Threshold (OTP Trigger):</span>
-              <strong style={{ color: 'var(--tier-med)' }}>{threshLow.toFixed(2)}</strong>
+              <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Low / Medium Threshold (OTP Trigger):</span>
+              <strong className="mono" style={{ color: 'var(--tier-med)' }}>{threshLow.toFixed(2)}</strong>
             </div>
             <input
               type="range"
@@ -313,8 +311,8 @@ export default function SecurityPolicyCenter({ onPolicyUpdated, onNotify }) {
 
           <div className="form-group">
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.25rem' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Medium / High Threshold (Auto-Block):</span>
-              <strong style={{ color: 'var(--tier-high)' }}>{threshHigh.toFixed(2)}</strong>
+              <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Medium / High Threshold (Auto-Block):</span>
+              <strong className="mono" style={{ color: 'var(--tier-high)' }}>{threshHigh.toFixed(2)}</strong>
             </div>
             <input
               type="range"
@@ -357,10 +355,10 @@ export default function SecurityPolicyCenter({ onPolicyUpdated, onNotify }) {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
             <div className="card-title" style={{ margin: 0 }}>
-              <Key size={18} color="#a855f7" />
-              <span>Gateway HMAC-SHA256 & Anti-Replay Tester</span>
+              <Key size={18} color="#BE185D" />
+              <span>Gateway HMAC-SHA256 &amp; Anti-Replay Tester</span>
             </div>
-            <span className="badge" style={{ background: 'rgba(139, 92, 246, 0.2)', color: '#c084fc' }}>Constant-Time</span>
+            <span className="badge badge-plum">Constant-Time</span>
           </div>
 
           <p className="card-desc" style={{ marginBottom: '0.85rem' }}>
@@ -368,16 +366,16 @@ export default function SecurityPolicyCenter({ onPolicyUpdated, onNotify }) {
           </p>
 
           <textarea
-            className="form-input"
+            className="form-input mono"
             rows={5}
             value={hmacPayloadText}
             onChange={(e) => setHmacPayloadText(e.target.value)}
-            style={{ fontFamily: 'Consolas, monospace', fontSize: '0.75rem', marginBottom: '0.75rem' }}
+            style={{ fontSize: '0.75rem', marginBottom: '0.8rem' }}
           />
 
           <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '0.85rem' }}>
-            <button type="button" onClick={handleSignPayload} disabled={hmacBusy} className="btn btn-outline btn-sm">
-              <FileCode size={14} color="#a855f7" />
+            <button type="button" onClick={handleSignPayload} disabled={hmacBusy} className="btn btn-plum btn-sm">
+              <FileCode size={14} />
               <span>1. Sign Payload</span>
             </button>
             <button type="button" onClick={handleVerifyPayload} disabled={hmacBusy || !hmacResult} className="btn btn-primary btn-sm">
@@ -388,33 +386,34 @@ export default function SecurityPolicyCenter({ onPolicyUpdated, onNotify }) {
 
           {hmacResult && (
             <div
+              className="sub-panel mono"
               style={{
-                background: 'rgba(15, 23, 42, 0.7)',
-                padding: '0.7rem',
-                borderRadius: '6px',
-                border: '1px solid var(--border-color)',
+                padding: '0.75rem',
                 fontSize: '0.72rem',
                 marginBottom: '0.75rem',
                 wordBreak: 'break-all',
               }}
             >
               <div><strong>X-Timestamp:</strong> <code>{hmacResult.timestamp}</code></div>
-              <div style={{ marginTop: '0.25rem' }}><strong>X-Signature:</strong> <code style={{ color: '#c084fc' }}>{hmacResult.signature}</code></div>
+              <div style={{ marginTop: '0.25rem' }}>
+                <strong>X-Signature:</strong> <code style={{ color: '#9D174D', fontWeight: 700 }}>{hmacResult.signature}</code>
+              </div>
             </div>
           )}
 
           {verifyResult && (
             <div
               style={{
-                padding: '0.7rem',
-                borderRadius: '6px',
+                padding: '0.75rem',
+                borderRadius: '8px',
                 fontSize: '0.78rem',
+                fontWeight: 600,
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem',
-                background: verifyResult.ok ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                border: `1px solid ${verifyResult.ok ? '#10b981' : '#ef4444'}`,
-                color: verifyResult.ok ? '#34d399' : '#f87171',
+                background: verifyResult.ok ? 'var(--tier-low-bg)' : 'var(--tier-high-bg)',
+                border: `1px solid ${verifyResult.ok ? 'var(--tier-low-border)' : 'var(--tier-high-border)'}`,
+                color: verifyResult.ok ? 'var(--tier-low)' : 'var(--tier-high)',
               }}
             >
               {verifyResult.ok ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
@@ -427,15 +426,15 @@ export default function SecurityPolicyCenter({ onPolicyUpdated, onNotify }) {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
             <div className="card-title" style={{ margin: 0 }}>
-              <Lock size={18} color="#10b981" />
+              <Lock size={18} color="#059669" />
               <span>Defense-in-Depth Security Posture</span>
             </div>
             <span className="badge badge-low">Active Hardening</span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.78rem' }}>
-            <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '0.8rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-              <div style={{ color: 'var(--accent-cyan)', fontWeight: 700, marginBottom: '0.25rem' }}>
+            <div className="sub-panel" style={{ padding: '0.85rem' }}>
+              <div style={{ color: '#E85D3F', fontWeight: 700, marginBottom: '0.25rem' }}>
                 DPDP Act 2023 Data Privacy
               </div>
               <div style={{ color: 'var(--text-muted)' }}>
@@ -444,19 +443,19 @@ export default function SecurityPolicyCenter({ onPolicyUpdated, onNotify }) {
               </div>
             </div>
 
-            <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '0.8rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-              <div style={{ color: '#a855f7', fontWeight: 700, marginBottom: '0.25rem' }}>
+            <div className="sub-panel" style={{ padding: '0.85rem' }}>
+              <div style={{ color: '#BE185D', fontWeight: 700, marginBottom: '0.25rem' }}>
                 Token Bucket Rate Limiting
               </div>
               <div style={{ color: 'var(--text-muted)' }}>
-                Rate: <strong>{posture?.rate_limiting?.rate_per_minute ?? 120} req/min</strong> •{' '}
-                Burst Capacity: <strong>{posture?.rate_limiting?.burst_capacity ?? 40} tokens</strong> •{' '}
-                Status: <strong>{posture?.rate_limiting?.enabled ? 'Enforced' : 'Bypassed'}</strong>
+                Rate: <strong style={{ color: 'var(--text-main)' }}>{posture?.rate_limiting?.rate_per_minute ?? 120} req/min</strong> •{' '}
+                Burst Capacity: <strong style={{ color: 'var(--text-main)' }}>{posture?.rate_limiting?.burst_capacity ?? 40} tokens</strong> •{' '}
+                Status: <strong style={{ color: 'var(--text-main)' }}>{posture?.rate_limiting?.enabled ? 'Enforced' : 'Bypassed'}</strong>
               </div>
             </div>
 
-            <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '0.8rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-              <div style={{ color: '#34d399', fontWeight: 700, marginBottom: '0.25rem' }}>
+            <div className="sub-panel" style={{ padding: '0.85rem' }}>
+              <div style={{ color: '#059669', fontWeight: 700, marginBottom: '0.25rem' }}>
                 OWASP HTTP Security Headers
               </div>
               <div style={{ color: 'var(--text-muted)' }}>
@@ -466,13 +465,13 @@ export default function SecurityPolicyCenter({ onPolicyUpdated, onNotify }) {
               </div>
             </div>
 
-            <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '0.8rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-              <div style={{ color: '#fbbf24', fontWeight: 700, marginBottom: '0.25rem' }}>
+            <div className="sub-panel" style={{ padding: '0.85rem' }}>
+              <div style={{ color: '#D97706', fontWeight: 700, marginBottom: '0.25rem' }}>
                 SQLite WAL &amp; Cryptographic Ledger
               </div>
               <div style={{ color: 'var(--text-muted)' }}>
                 {posture?.privacy_compliance?.audit_ledger || 'Append-Only Cryptographic Hash Chain'} • Anti-Replay Window:{' '}
-                <strong>{posture?.gateway_authentication?.anti_replay_window_seconds ?? 300}s</strong>
+                <strong style={{ color: 'var(--text-main)' }}>{posture?.gateway_authentication?.anti_replay_window_seconds ?? 300}s</strong>
               </div>
             </div>
           </div>

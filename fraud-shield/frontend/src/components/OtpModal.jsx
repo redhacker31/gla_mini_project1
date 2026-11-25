@@ -1,23 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  X, 
-  Smartphone, 
-  Lock, 
-  CheckCircle2, 
-  AlertTriangle, 
-  ShieldAlert, 
-  RefreshCw, 
+import {
+  X,
+  Smartphone,
+  CheckCircle2,
+  AlertTriangle,
+  ShieldAlert,
+  RefreshCw,
   KeyRound,
-  Clock
+  Clock,
 } from 'lucide-react';
 import { verifyOtp, resendOtp, fetchLatestOtp, fetchOtpSession } from '../services/api';
 
-export default function OtpModal({ 
-  sessionId, 
-  txnId, 
-  onClose, 
+export default function OtpModal({
+  sessionId,
+  txnId,
+  onClose,
   onSuccess,
-  onNotify 
+  onNotify,
 }) {
   const [otpCode, setOtpCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,7 +27,6 @@ export default function OtpModal({
   const [timeLeft, setTimeLeft] = useState(180);
   const [sandboxOtp, setSandboxOtp] = useState(null);
 
-  // Load session information & sandbox SMS preview on mount
   useEffect(() => {
     let mounted = true;
     async function loadInfo() {
@@ -54,16 +52,17 @@ export default function OtpModal({
           setSandboxOtp(latest.otp);
         }
       } catch {
-        // Ignore if sandbox endpoint is disabled
+        // Ignore if sandbox endpoint is disabled in production
       }
     }
     if (sessionId) {
       loadInfo();
     }
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [sessionId]);
 
-  // TTL Countdown Timer
   useEffect(() => {
     const timer = setInterval(() => {
       setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
@@ -71,7 +70,6 @@ export default function OtpModal({
     return () => clearInterval(timer);
   }, []);
 
-  // Handle ESC key to close modal
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
@@ -82,12 +80,12 @@ export default function OtpModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  // Sandbox helper: autofill OTP
   const handleSandboxAutofill = async () => {
     try {
       const data = await fetchLatestOtp(sessionId);
       if (data && data.otp) {
         setOtpCode(data.otp);
+        setSandboxOtp(data.otp);
         onNotify?.(`Sandbox autofilled OTP: ${data.otp}`, 'info');
       }
     } catch (err) {
@@ -95,7 +93,6 @@ export default function OtpModal({
     }
   };
 
-  // Submit OTP Verification
   const handleVerify = async (e) => {
     e.preventDefault();
     if (!otpCode || otpCode.length !== 6) {
@@ -117,7 +114,7 @@ export default function OtpModal({
       } else if (resp.status === 'LOCKED' || resp.status === 'REJECTED') {
         setResultStatus('LOCKED');
         setResultMessage(resp.message || 'Maximum 3 attempts exceeded. Transaction REJECTED.');
-        onNotify?.(`Transaction rejected due to failed OTP verification.`, 'error');
+        onNotify?.('Transaction rejected due to failed OTP verification.', 'error');
         onSuccess?.();
       } else {
         setResultStatus('ATTEMPT_FAILED');
@@ -131,7 +128,6 @@ export default function OtpModal({
     }
   };
 
-  // Resend OTP
   const handleResend = async () => {
     setResending(true);
     setResultMessage(null);
@@ -155,7 +151,7 @@ export default function OtpModal({
   };
 
   return (
-    <div 
+    <div
       className="modal-overlay"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose?.();
@@ -163,54 +159,50 @@ export default function OtpModal({
     >
       <div className="modal-content">
         <div className="modal-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <KeyRound size={20} color="#fbbf24" />
-            <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#fff', fontWeight: 600 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+            <KeyRound size={20} color="#D97706" />
+            <h3 style={{ margin: 0, fontSize: '1.08rem', color: 'var(--text-main)', fontWeight: 700 }}>
               Step-Up OTP Authentication Challenge
             </h3>
           </div>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="btn btn-outline btn-sm"
-            style={{ border: 'none', padding: '0.25rem' }}
+            style={{ padding: '0.28rem' }}
           >
-            <X size={18} />
+            <X size={17} />
           </button>
         </div>
 
         <div className="modal-body">
           {/* Challenge Context Info */}
-          <div style={{
-            background: 'rgba(15, 23, 42, 0.7)',
-            padding: '1rem',
-            borderRadius: '8px',
-            border: '1px solid var(--border-color)',
-            marginBottom: '1.25rem',
-            fontSize: '0.8rem',
-          }}>
+          <div className="sub-panel" style={{ padding: '1rem', marginBottom: '1.1rem', fontSize: '0.8rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
               <span style={{ color: 'var(--text-muted)' }}>Transaction ID:</span>
-              <code style={{ color: '#fff' }}>{txnId}</code>
+              <code style={{ color: 'var(--text-main)', fontWeight: 600 }}>{txnId}</code>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
               <span style={{ color: 'var(--text-muted)' }}>Session ID:</span>
-              <code style={{ color: 'var(--text-dim)' }}>{sessionId?.substring(0, 20)}...</code>
+              <code style={{ color: 'var(--text-dim)' }}>{sessionId?.substring(0, 22)}...</code>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
               <span style={{ color: 'var(--text-muted)' }}>SMS Dispatch Destination:</span>
-              <strong style={{ color: '#fff' }}>
+              <strong style={{ color: 'var(--text-main)' }}>
                 {sessionInfo?.phone_masked || '+91 98*** **321'}
               </strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ color: 'var(--text-muted)' }}>TTL Window:</span>
-              <span style={{
-                color: timeLeft < 30 ? '#ef4444' : '#fbbf24',
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-              }}>
+              <span
+                className="mono"
+                style={{
+                  color: timeLeft < 30 ? 'var(--tier-high)' : 'var(--tier-med)',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                }}
+              >
                 <Clock size={12} />
                 {formatTime(timeLeft)} remaining
               </span>
@@ -219,32 +211,38 @@ export default function OtpModal({
 
           {/* Simulated SMS Gateway Inbox Notification */}
           {sandboxOtp && (
-            <div style={{
-              background: 'rgba(6, 182, 212, 0.1)',
-              border: '1px solid rgba(6, 182, 212, 0.35)',
-              borderRadius: '8px',
-              padding: '0.75rem 0.9rem',
-              marginBottom: '1rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '0.75rem',
-              fontSize: '0.76rem',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-                <Smartphone size={16} color="var(--accent-cyan)" />
+            <div
+              style={{
+                background: 'var(--accent-coral-tint)',
+                border: '1px solid var(--accent-coral-border)',
+                borderRadius: '10px',
+                padding: '0.8rem 0.95rem',
+                marginBottom: '1.1rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '0.75rem',
+                fontSize: '0.78rem',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <Smartphone size={17} color="#E85D3F" />
                 <div>
-                  <div style={{ color: 'var(--accent-cyan)', fontWeight: 700 }}>Simulated Telecom SMS Received</div>
+                  <div style={{ color: 'var(--accent-coral-hover)', fontWeight: 700 }}>Simulated Telecom SMS Received</div>
                   <div style={{ color: 'var(--text-muted)' }}>
-                    Your verification OTP is <strong style={{ color: '#fff', letterSpacing: '0.1em' }}>{sandboxOtp}</strong> (valid 3 min).
+                    Your verification OTP is{' '}
+                    <strong className="mono" style={{ color: 'var(--text-main)', letterSpacing: '0.1em' }}>
+                      {sandboxOtp}
+                    </strong>{' '}
+                    (valid 3 min).
                   </div>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setOtpCode(sandboxOtp)}
-                className="btn btn-outline btn-sm"
-                style={{ whiteSpace: 'nowrap', borderColor: 'rgba(6, 182, 212, 0.5)', color: '#67e8f9' }}
+                className="btn btn-primary btn-sm"
+                style={{ whiteSpace: 'nowrap' }}
               >
                 Use Code
               </button>
@@ -264,8 +262,9 @@ export default function OtpModal({
                   style={{
                     background: 'transparent',
                     border: 'none',
-                    color: 'var(--accent-cyan)',
-                    fontSize: '0.725rem',
+                    color: '#BE185D',
+                    fontSize: '0.73rem',
+                    fontWeight: 600,
                     cursor: 'pointer',
                     textDecoration: 'underline',
                   }}
@@ -280,41 +279,51 @@ export default function OtpModal({
                 value={otpCode}
                 onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
                 placeholder="• • • • • •"
-                className="form-input"
+                className="form-input mono"
                 disabled={resultStatus === 'APPROVED' || resultStatus === 'LOCKED'}
                 style={{
-                  fontSize: '1.5rem',
-                  letterSpacing: '0.5rem',
+                  fontSize: '1.55rem',
+                  letterSpacing: '0.55rem',
                   textAlign: 'center',
-                  fontWeight: 700,
-                  fontFamily: 'Consolas, monospace',
+                  fontWeight: 800,
                   padding: '0.75rem',
                 }}
                 autoFocus
               />
             </div>
 
-            {/* Outcome message */}
             {resultMessage && (
-              <div style={{
-                padding: '0.75rem',
-                borderRadius: '6px',
-                marginBottom: '1rem',
-                fontSize: '0.8rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                background: 
-                  resultStatus === 'APPROVED' ? 'rgba(16, 185, 129, 0.15)' :
-                  resultStatus === 'LOCKED' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.15)',
-                border: `1px solid ${
-                  resultStatus === 'APPROVED' ? '#10b981' :
-                  resultStatus === 'LOCKED' ? '#ef4444' : '#f59e0b'
-                }`,
-                color:
-                  resultStatus === 'APPROVED' ? '#34d399' :
-                  resultStatus === 'LOCKED' ? '#f87171' : '#fbbf24',
-              }}>
+              <div
+                style={{
+                  padding: '0.8rem',
+                  borderRadius: '8px',
+                  marginBottom: '1rem',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  background:
+                    resultStatus === 'APPROVED'
+                      ? 'var(--tier-low-bg)'
+                      : resultStatus === 'LOCKED'
+                      ? 'var(--tier-high-bg)'
+                      : 'var(--tier-med-bg)',
+                  border: `1px solid ${
+                    resultStatus === 'APPROVED'
+                      ? 'var(--tier-low-border)'
+                      : resultStatus === 'LOCKED'
+                      ? 'var(--tier-high-border)'
+                      : 'var(--tier-med-border)'
+                  }`,
+                  color:
+                    resultStatus === 'APPROVED'
+                      ? 'var(--tier-low)'
+                      : resultStatus === 'LOCKED'
+                      ? 'var(--tier-high)'
+                      : 'var(--tier-med)',
+                }}
+              >
                 {resultStatus === 'APPROVED' && <CheckCircle2 size={16} />}
                 {resultStatus === 'ATTEMPT_FAILED' && <AlertTriangle size={16} />}
                 {resultStatus === 'LOCKED' && <ShieldAlert size={16} />}
@@ -337,7 +346,7 @@ export default function OtpModal({
               <button
                 type="submit"
                 disabled={loading || otpCode.length !== 6 || resultStatus === 'APPROVED' || resultStatus === 'LOCKED'}
-                className="btn btn-warning"
+                className="btn btn-primary"
                 style={{ flex: 1.5 }}
               >
                 <span>{loading ? 'Verifying...' : 'Verify OTP Code'}</span>

@@ -26,7 +26,9 @@ export default function Navbar({
   return (
     <header className="header">
       <div className="logo-area">
-        <Shield className="logo-icon" />
+        <div className="logo-icon-wrap">
+          <Shield className="logo-icon" />
+        </div>
         <div>
           <div className="logo-title">
             FRAUD SHIELD
@@ -38,7 +40,7 @@ export default function Navbar({
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
         {/* API Health Badge */}
         <div
           className={`status-badge ${
@@ -56,11 +58,11 @@ export default function Navbar({
           <button
             onClick={onSeedDemo}
             disabled={seedingDemo}
-            className="btn btn-outline btn-sm"
+            className="btn btn-warning btn-sm"
             title="Populate realistic sample UPI transactions & attacks"
           >
-            <Sparkles size={13} color="#fbbf24" className={seedingDemo ? 'spin' : ''} />
-            <span>{seedingDemo ? 'Seeding...' : 'Load Demo Traffic'}</span>
+            <Sparkles size={13} className={seedingDemo ? 'spin' : ''} />
+            <span>{seedingDemo ? 'Seeding...' : 'Seed Demo Data'}</span>
           </button>
         )}
 
@@ -70,7 +72,7 @@ export default function Navbar({
           className="btn btn-outline btn-sm"
           title="Verify Cryptographic Hash Chain"
         >
-          <Shield size={13} color="#10b981" />
+          <Shield size={13} color="#059669" />
           <span>Audit Ledger</span>
         </button>
 
@@ -80,7 +82,7 @@ export default function Navbar({
           className="btn btn-outline btn-sm"
           title="Inspect Sub-50ms SLA Latency Profiling"
         >
-          <Activity size={13} color="#a855f7" />
+          <Activity size={13} color="#BE185D" />
           <span>SLA &lt;50ms</span>
         </button>
 
@@ -114,7 +116,7 @@ export default function Navbar({
           style={{ textDecoration: 'none' }}
           title="Open FastAPI Swagger Interactive Docs"
         >
-          <ExternalLink size={13} />
+          <ExternalLink size={13} color="#E85D3F" />
           <span>API Docs</span>
         </a>
       </div>

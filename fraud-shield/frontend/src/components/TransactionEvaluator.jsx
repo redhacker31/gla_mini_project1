@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
 import {
   Send,
-  CheckCircle2,
-  AlertTriangle,
-  ShieldAlert,
   Zap,
   Lock,
   Smartphone,
@@ -160,16 +157,22 @@ export default function TransactionEvaluator({
     return 'var(--tier-high)';
   };
 
+  const getTierBg = (tier) => {
+    if (tier === 'LOW') return 'var(--tier-low-bg)';
+    if (tier === 'MEDIUM') return 'var(--tier-med-bg)';
+    return 'var(--tier-high-bg)';
+  };
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
       {/* LEFT PANE: Interactive Mobile UPI Checkout Prototype */}
       <div className="card">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
           <div className="card-title" style={{ margin: 0 }}>
-            <Smartphone size={18} color="var(--accent-cyan)" />
+            <Smartphone size={18} color="#E85D3F" />
             <span>UPI Micro-Payment Checkout Simulator</span>
           </div>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.73rem', color: 'var(--text-muted)', cursor: 'pointer' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500, cursor: 'pointer' }}>
             <input
               type="checkbox"
               checked={autoOpenOtp}
@@ -180,7 +183,7 @@ export default function TransactionEvaluator({
         </div>
 
         {/* Quick Presets Ribbon */}
-        <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', marginBottom: '1.1rem' }}>
+        <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', marginBottom: '1.15rem' }}>
           <button type="button" onClick={() => applyPreset('tea')} className="btn btn-outline btn-sm">
             ☕ Tea Stall (₹35)
           </button>
@@ -200,7 +203,7 @@ export default function TransactionEvaluator({
 
         {/* Payment Form */}
         <form onSubmit={handleSubmit}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
             <div className="form-group">
               <label className="form-label">Payer User ID</label>
               <input
@@ -224,14 +227,14 @@ export default function TransactionEvaluator({
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                 required
               />
-              <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.35rem' }}>
+              <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.4rem' }}>
                 {['45.00', '120.00', '480.00', '950.00'].map((amt) => (
                   <button
                     key={amt}
                     type="button"
                     onClick={() => setFormData({ ...formData, amount: amt })}
                     className="btn btn-outline btn-sm"
-                    style={{ padding: '0.12rem 0.4rem', fontSize: '0.68rem' }}
+                    style={{ padding: '0.14rem 0.45rem', fontSize: '0.68rem' }}
                   >
                     ₹{parseInt(amt, 10)}
                   </button>
@@ -296,10 +299,10 @@ export default function TransactionEvaluator({
               type="button"
               disabled={loading}
               onClick={handleRapidBurst}
-              className="btn btn-outline"
+              className="btn btn-warning"
               title="Fire 3 micro-transactions in rapid succession (<1s) to trigger sliding-window velocity detection"
             >
-              <Zap size={14} color="#f59e0b" />
+              <Zap size={14} />
               <span>Fire Rapid Burst (x3)</span>
             </button>
 
@@ -315,22 +318,23 @@ export default function TransactionEvaluator({
       <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
           <div className="card-title" style={{ margin: 0 }}>
-            <CreditCard size={18} color="var(--accent-cyan)" />
+            <CreditCard size={18} color="#BE185D" />
             <span>Gateway Risk Verdict &amp; Telemetry</span>
           </div>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>SLA Target &lt; 50ms</span>
+          <span className="badge badge-plum">SLA Target &lt; 50ms</span>
         </div>
 
         {evalResult ? (
           <div
             style={{
-              background: 'rgba(15, 23, 42, 0.9)',
-              borderRadius: '8px',
-              border: `1px solid ${getTierColor(evalResult.risk_tier)}`,
-              padding: '1.15rem',
+              background: '#FAF8F5',
+              borderRadius: '12px',
+              border: `2px solid ${getTierColor(evalResult.risk_tier)}`,
+              padding: '1.2rem',
               flex: 1,
               display: 'flex',
               flexDirection: 'column',
+              animation: 'fadeIn 0.25s ease',
             }}
           >
             {/* Header */}
@@ -348,9 +352,9 @@ export default function TransactionEvaluator({
             >
               <div>
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                  Txn: <code style={{ color: '#fff' }}>{evalResult.txn_id.substring(0, 14)}...</code>
+                  Txn: <code style={{ color: 'var(--text-main)', fontWeight: 600 }}>{evalResult.txn_id.substring(0, 14)}...</code>
                 </div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#fff', marginTop: '0.2rem' }}>
+                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '0.2rem', fontFamily: 'var(--font-display)' }}>
                   ₹{evalResult.amount?.toFixed(2)} &rarr; {evalResult.recipient_vpa_masked || evalResult.recipient_vpa}
                 </div>
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '0.2rem' }}>
@@ -359,8 +363,8 @@ export default function TransactionEvaluator({
               </div>
 
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Composite Score S(x)</div>
-                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: getTierColor(evalResult.risk_tier) }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>Composite Score S(x)</div>
+                <div style={{ fontSize: '1.85rem', fontWeight: 800, color: getTierColor(evalResult.risk_tier), fontFamily: 'var(--font-display)' }}>
                   {evalResult.composite_score?.toFixed(4)}
                 </div>
                 <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'flex-end' }}>
@@ -388,12 +392,12 @@ export default function TransactionEvaluator({
 
             {/* Score Gauge */}
             <div style={{ marginBottom: '0.9rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.28rem' }}>
                 <span>Low (&lt; {lowThresh.toFixed(2)})</span>
                 <span>OTP ({lowThresh.toFixed(2)} - {highThresh.toFixed(2)})</span>
                 <span>Block (&ge; {highThresh.toFixed(2)})</span>
               </div>
-              <div style={{ height: '8px', borderRadius: '4px', background: '#1e293b', overflow: 'hidden', position: 'relative' }}>
+              <div style={{ height: '10px', borderRadius: '999px', background: '#E5DEC9', overflow: 'hidden', position: 'relative' }}>
                 <div
                   style={{
                     position: 'absolute',
@@ -402,7 +406,7 @@ export default function TransactionEvaluator({
                     bottom: 0,
                     width: `${Math.min(100, Math.max(0, evalResult.composite_score * 100))}%`,
                     background: getTierColor(evalResult.risk_tier),
-                    borderRadius: '4px',
+                    borderRadius: '999px',
                     transition: 'width 0.35s ease',
                   }}
                 />
@@ -415,33 +419,44 @@ export default function TransactionEvaluator({
                 display: 'grid',
                 gridTemplateColumns: 'repeat(3, 1fr)',
                 gap: '0.6rem',
-                background: 'rgba(0, 0, 0, 0.25)',
-                padding: '0.65rem',
-                borderRadius: '6px',
+                background: '#FFFFFF',
+                border: '1px solid var(--border-color)',
+                padding: '0.75rem',
+                borderRadius: '8px',
                 fontSize: '0.78rem',
                 marginBottom: '0.9rem',
               }}
             >
               <div>
-                <div style={{ color: 'var(--text-dim)', fontSize: '0.68rem' }}>Isolation Forest</div>
-                <div style={{ fontWeight: 700, color: '#38bdf8' }}>{evalResult.ml_score?.toFixed(4)}</div>
+                <div style={{ color: 'var(--text-dim)', fontSize: '0.68rem', fontWeight: 600 }}>Isolation Forest</div>
+                <div style={{ fontWeight: 800, color: '#BE185D', fontFamily: 'var(--font-mono)' }}>{evalResult.ml_score?.toFixed(4)}</div>
               </div>
               <div>
-                <div style={{ color: 'var(--text-dim)', fontSize: '0.68rem' }}>Latency</div>
-                <div style={{ fontWeight: 700, color: evalResult.latency_ms < 50 ? '#34d399' : '#f87171' }}>
+                <div style={{ color: 'var(--text-dim)', fontSize: '0.68rem', fontWeight: 600 }}>Latency</div>
+                <div style={{ fontWeight: 800, color: evalResult.latency_ms < 50 ? '#059669' : '#DC2626', fontFamily: 'var(--font-mono)' }}>
                   {evalResult.latency_ms?.toFixed(2)} ms
                 </div>
               </div>
               <div>
-                <div style={{ color: 'var(--text-dim)', fontSize: '0.68rem' }}>Challenge</div>
-                <div style={{ fontWeight: 700, color: evalResult.challenge_required ? '#fbbf24' : '#10b981' }}>
+                <div style={{ color: 'var(--text-dim)', fontSize: '0.68rem', fontWeight: 600 }}>Challenge</div>
+                <div style={{ fontWeight: 800, color: evalResult.challenge_required ? '#D97706' : '#059669' }}>
                   {evalResult.challenge_required ? 'SMS OTP' : 'None'}
                 </div>
               </div>
             </div>
 
             {/* Explanation */}
-            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.85rem', lineHeight: 1.45 }}>
+            <div
+              style={{
+                fontSize: '0.79rem',
+                color: 'var(--text-main)',
+                background: getTierBg(evalResult.risk_tier),
+                borderRadius: '8px',
+                padding: '0.65rem 0.85rem',
+                marginBottom: '0.85rem',
+                lineHeight: 1.45,
+              }}
+            >
               {evalResult.explanation}
             </div>
 
@@ -449,18 +464,7 @@ export default function TransactionEvaluator({
             {evalResult.triggered_rules && evalResult.triggered_rules.length > 0 && (
               <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', marginBottom: '0.9rem' }}>
                 {evalResult.triggered_rules.map((rule, idx) => (
-                  <span
-                    key={idx}
-                    style={{
-                      background: 'rgba(239, 68, 68, 0.15)',
-                      border: '1px solid rgba(239, 68, 68, 0.35)',
-                      color: '#f87171',
-                      padding: '0.2rem 0.5rem',
-                      borderRadius: '4px',
-                      fontSize: '0.72rem',
-                      fontFamily: 'Consolas, monospace',
-                    }}
-                  >
+                  <span key={idx} className="badge badge-high mono" style={{ fontSize: '0.7rem' }}>
                     {rule.rule_id} (+{(rule.penalty ?? rule.weight ?? 0).toFixed(2)})
                   </span>
                 ))}
@@ -483,7 +487,7 @@ export default function TransactionEvaluator({
               <button
                 type="button"
                 onClick={() => onInspectInExplainability?.(evalResult.txn_id)}
-                className="btn btn-outline btn-sm"
+                className="btn btn-plum btn-sm"
               >
                 <Compass size={14} />
                 <span>Inspect Explainability &rarr;</span>
@@ -492,6 +496,7 @@ export default function TransactionEvaluator({
           </div>
         ) : (
           <div
+            className="sub-panel"
             style={{
               flex: 1,
               display: 'flex',
@@ -499,19 +504,31 @@ export default function TransactionEvaluator({
               alignItems: 'center',
               justifyContent: 'center',
               textAlign: 'center',
-              padding: '2rem 1rem',
-              background: 'rgba(15, 23, 42, 0.45)',
-              borderRadius: '8px',
-              border: '1px dashed var(--border-light)',
-              color: 'var(--text-dim)',
-              fontSize: '0.82rem',
+              padding: '2.25rem 1.25rem',
+              borderStyle: 'dashed',
+              color: 'var(--text-muted)',
+              fontSize: '0.84rem',
             }}
           >
-            <Zap size={32} color="var(--accent-cyan)" style={{ opacity: 0.7, marginBottom: '0.75rem' }} />
-            <div style={{ color: '#fff', fontWeight: 600, marginBottom: '0.35rem' }}>
+            <div
+              style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '14px',
+                background: 'var(--accent-coral-tint)',
+                border: '1px solid var(--accent-coral-border)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '0.85rem',
+              }}
+            >
+              <Zap size={28} color="#E85D3F" />
+            </div>
+            <div style={{ color: 'var(--text-main)', fontWeight: 700, fontSize: '0.98rem', marginBottom: '0.35rem', fontFamily: 'var(--font-display)' }}>
               Ready to Score Real-Time Micro-Transactions
             </div>
-            <p style={{ maxWidth: '340px', lineHeight: 1.5 }}>
+            <p style={{ maxWidth: '350px', lineHeight: 1.55, color: 'var(--text-muted)' }}>
               Select a scenario preset or submit a custom UPI transfer on the left to observe sub-50ms Isolation Forest inference, deterministic rules, and adaptive Step-Up OTP challenges.
             </p>
           </div>

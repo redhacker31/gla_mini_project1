@@ -2,11 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   X,
   CheckCircle2,
-  ShieldAlert,
-  AlertTriangle,
   KeyRound,
   Compass,
-  Clock,
   ShieldCheck,
   UserCheck,
   Ban,
@@ -52,7 +49,10 @@ export default function TransactionDetailModal({
         analystNote,
         decision === 'REJECT' && blacklistRecipient
       );
-      onNotify?.(resp.message || `Transaction ${decision === 'APPROVE' ? 'approved' : 'rejected'}.`, decision === 'APPROVE' ? 'success' : 'info');
+      onNotify?.(
+        resp.message || `Transaction ${decision === 'APPROVE' ? 'approved' : 'rejected'}.`,
+        decision === 'APPROVE' ? 'success' : 'info'
+      );
       if (resp.blacklisted_vpa) {
         onNotify?.(`Recipient VPA ${resp.blacklisted_vpa} added to live blacklist.`, 'info');
       }
@@ -80,10 +80,10 @@ export default function TransactionDetailModal({
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
             <ShieldCheck size={20} color={tierColor} />
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#fff', fontWeight: 600 }}>
-                Transaction Telemetry & Analyst Review
+              <h3 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-main)', fontWeight: 700 }}>
+                Transaction Telemetry &amp; Analyst Review
               </h3>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
                 <code>{transaction.txn_id}</code>
               </div>
             </div>
@@ -91,9 +91,9 @@ export default function TransactionDetailModal({
           <button
             onClick={onClose}
             className="btn btn-outline btn-sm"
-            style={{ border: 'none', padding: '0.25rem' }}
+            style={{ padding: '0.28rem' }}
           >
-            <X size={18} />
+            <X size={17} />
           </button>
         </div>
 
@@ -106,29 +106,29 @@ export default function TransactionDetailModal({
               alignItems: 'center',
               flexWrap: 'wrap',
               gap: '1rem',
-              padding: '1rem',
-              borderRadius: '8px',
-              background: 'rgba(15, 23, 42, 0.8)',
-              border: `1px solid ${tierColor}`,
+              padding: '1.05rem',
+              borderRadius: '10px',
+              background: '#FAF8F5',
+              border: `2px solid ${tierColor}`,
               marginBottom: '1.15rem',
             }}
           >
             <div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Amount & Destination</div>
-              <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#fff' }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>Amount &amp; Destination</div>
+              <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', fontFamily: 'var(--font-display)' }}>
                 ₹{(transaction.amount ?? 0).toFixed(2)}{' '}
-                <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-muted)' }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-muted)' }}>
                   &rarr; {transaction.recipient_vpa_masked || transaction.recipient_vpa || 'N/A'}
                 </span>
               </div>
               <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '0.25rem' }}>
-                Channel: <strong style={{ color: '#cbd5e1' }}>{transaction.channel || 'UPI'}</strong> •{' '}
+                Channel: <strong style={{ color: 'var(--text-main)' }}>{transaction.channel || 'UPI'}</strong> •{' '}
                 DPDP ID: <code>{(transaction.user_hash || transaction.user_id || '').substring(0, 16)}...</code>
               </div>
             </div>
 
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '1.65rem', fontWeight: 800, color: tierColor }}>
+              <div style={{ fontSize: '1.65rem', fontWeight: 800, color: tierColor, fontFamily: 'var(--font-display)' }}>
                 S(x) = {score.toFixed(4)}
               </div>
               <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end', marginTop: '0.25rem' }}>
@@ -164,19 +164,19 @@ export default function TransactionDetailModal({
               fontSize: '0.8rem',
             }}
           >
-            <div style={{ background: 'rgba(15, 23, 42, 0.55)', padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>ML Anomaly Score (S_ml)</div>
-              <div style={{ fontWeight: 700, color: '#38bdf8', fontSize: '1rem' }}>{mlScore.toFixed(4)}</div>
+            <div className="sub-panel" style={{ padding: '0.7rem 0.9rem' }}>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>ML Anomaly Score (S_ml)</div>
+              <div className="mono" style={{ fontWeight: 800, color: '#BE185D', fontSize: '1rem' }}>{mlScore.toFixed(4)}</div>
             </div>
-            <div style={{ background: 'rgba(15, 23, 42, 0.55)', padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>Evaluation Latency</div>
-              <div style={{ fontWeight: 700, color: latency < 50 ? '#34d399' : '#f87171', fontSize: '1rem' }}>
+            <div className="sub-panel" style={{ padding: '0.7rem 0.9rem' }}>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Evaluation Latency</div>
+              <div className="mono" style={{ fontWeight: 800, color: latency < 50 ? 'var(--tier-low)' : 'var(--tier-high)', fontSize: '1rem' }}>
                 {latency.toFixed(2)} ms
               </div>
             </div>
-            <div style={{ background: 'rgba(15, 23, 42, 0.55)', padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>Timestamp</div>
-              <div style={{ fontWeight: 600, color: '#fff', fontSize: '0.82rem', marginTop: '0.15rem' }}>
+            <div className="sub-panel" style={{ padding: '0.7rem 0.9rem' }}>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Timestamp</div>
+              <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.8rem', marginTop: '0.15rem' }}>
                 {(transaction.timestamp || transaction.created_at)
                   ? new Date(transaction.timestamp || transaction.created_at).toLocaleString()
                   : 'Just now'}
@@ -186,23 +186,22 @@ export default function TransactionDetailModal({
 
           {/* Decision Explanation */}
           <div
+            className="sub-panel"
             style={{
-              background: 'rgba(30, 41, 59, 0.55)',
-              borderLeft: `3px solid ${tierColor}`,
-              padding: '0.75rem 1rem',
-              borderRadius: '0 6px 6px 0',
+              borderLeft: `4px solid ${tierColor}`,
+              borderRadius: '0 8px 8px 0',
+              padding: '0.8rem 1rem',
               fontSize: '0.8rem',
-              color: 'var(--text-main)',
               marginBottom: '1.15rem',
             }}
           >
-            <div style={{ fontWeight: 600, marginBottom: '0.2rem', color: '#fff' }}>Risk Engine Decision Rationale</div>
+            <div style={{ fontWeight: 700, marginBottom: '0.2rem', color: 'var(--text-main)' }}>Risk Engine Decision Rationale</div>
             <div style={{ color: 'var(--text-muted)' }}>{explanation}</div>
           </div>
 
           {/* Triggered Rules */}
           <div style={{ marginBottom: '1.15rem' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.45rem' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.45rem', textTransform: 'uppercase' }}>
               Triggered Deterministic Rules ({triggeredRules.length})
             </div>
             {triggeredRules.length > 0 ? (
@@ -215,44 +214,37 @@ export default function TransactionDetailModal({
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       gap: '0.75rem',
-                      padding: '0.5rem 0.75rem',
-                      background: 'rgba(239, 68, 68, 0.1)',
-                      border: '1px solid rgba(239, 68, 68, 0.25)',
-                      borderRadius: '6px',
-                      fontSize: '0.75rem',
+                      padding: '0.55rem 0.8rem',
+                      background: 'var(--tier-high-bg)',
+                      border: '1px solid var(--tier-high-border)',
+                      borderRadius: '8px',
+                      fontSize: '0.76rem',
                     }}
                   >
                     <div>
-                      <code style={{ color: '#f87171', fontWeight: 700 }}>{r.rule_id}</code>
-                      <div style={{ color: 'var(--text-muted)', marginTop: '0.1rem' }}>{r.reason}</div>
+                      <code style={{ color: 'var(--tier-high)', fontWeight: 700 }}>{r.rule_id}</code>
+                      <div style={{ color: 'var(--text-muted)', marginTop: '0.12rem' }}>{r.reason}</div>
                     </div>
-                    <span className="badge badge-high" style={{ whiteSpace: 'nowrap' }}>
+                    <span className="badge badge-high mono" style={{ whiteSpace: 'nowrap' }}>
                       +{(r.penalty ?? r.weight ?? 0).toFixed(2)}
                     </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <div style={{ fontSize: '0.78rem', color: '#34d399', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <div style={{ fontSize: '0.78rem', color: 'var(--tier-low)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                 <CheckCircle2 size={14} />
                 <span>No deterministic security rules triggered.</span>
               </div>
             )}
           </div>
 
-          {/* Analyst Override Panel for Pending / Flagged Transactions */}
+          {/* Analyst Override Panel */}
           {canReview && (
-            <div
-              style={{
-                background: 'rgba(15, 23, 42, 0.75)',
-                border: '1px solid var(--border-light)',
-                borderRadius: '8px',
-                padding: '1rem',
-              }}
-            >
-              <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#fff', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <UserCheck size={15} color="var(--accent-cyan)" />
-                <span>Fraud Analyst Manual Review & Resolution</span>
+            <div className="sub-panel" style={{ padding: '1rem' }}>
+              <div style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <UserCheck size={15} color="#E85D3F" />
+                <span>Fraud Analyst Manual Review &amp; Resolution</span>
               </div>
 
               <div className="form-group" style={{ marginBottom: '0.7rem' }}>
@@ -302,7 +294,7 @@ export default function TransactionDetailModal({
                   className="btn btn-danger btn-sm"
                 >
                   <Ban size={14} />
-                  <span>Confirm Fraud & Reject</span>
+                  <span>Confirm Fraud &amp; Reject</span>
                 </button>
                 {transaction.status === 'PENDING_VERIFICATION' && transaction.session_id && (
                   <button

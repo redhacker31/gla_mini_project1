@@ -23,46 +23,52 @@ export default class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#0a0f1d',
-          color: '#fff',
-          padding: '2rem',
-          fontFamily: 'system-ui, sans-serif',
-        }}>
-          <div style={{
-            maxWidth: '520px',
-            width: '100%',
-            background: 'rgba(15, 23, 42, 0.95)',
-            border: '1px solid #ef4444',
-            borderRadius: '12px',
+        <div
+          style={{
+            minHeight: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: '#FAF8F5',
+            color: '#1E1916',
             padding: '2rem',
-            textAlign: 'center',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.7)',
-          }}>
-            <ShieldAlert size={48} color="#ef4444" style={{ margin: '0 auto 1rem' }} />
-            <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.25rem', color: '#fff' }}>
+            fontFamily: 'Inter, system-ui, sans-serif',
+          }}
+        >
+          <div
+            style={{
+              maxWidth: '520px',
+              width: '100%',
+              background: '#FFFFFF',
+              border: '1px solid #FECACA',
+              borderRadius: '14px',
+              padding: '2rem',
+              textAlign: 'center',
+              boxShadow: '0 20px 40px rgba(44, 34, 24, 0.12)',
+            }}
+          >
+            <ShieldAlert size={48} color="#DC2626" style={{ margin: '0 auto 1rem' }} />
+            <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.25rem', color: '#1E1916' }}>
               Dashboard UI Encountered an Error
             </h2>
-            <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
-              The application recovered from an unexpected rendering exception. You can reload the dashboard to restore active telemetry.
+            <p style={{ color: '#5C5248', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
+              The application recovered from an unexpected rendering exception. Reload the dashboard to restore active telemetry.
             </p>
             {this.state.error?.message && (
-              <pre style={{
-                background: '#030712',
-                padding: '0.75rem',
-                borderRadius: '6px',
-                color: '#f87171',
-                fontSize: '0.75rem',
-                textAlign: 'left',
-                overflowX: 'auto',
-                marginBottom: '1.5rem',
-                border: '1px solid #374151',
-              }}>
+              <pre
+                style={{
+                  background: '#FEF2F2',
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  color: '#DC2626',
+                  fontSize: '0.75rem',
+                  textAlign: 'left',
+                  overflowX: 'auto',
+                  marginBottom: '1.5rem',
+                  border: '1px solid #FECACA',
+                }}
+              >
                 {this.state.error.message}
               </pre>
             )}
@@ -73,11 +79,11 @@ export default class ErrorBoundary extends React.Component {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.5rem',
-                padding: '0.6rem 1.25rem',
-                background: '#2563eb',
-                color: '#fff',
+                padding: '0.65rem 1.35rem',
+                background: '#E85D3F',
+                color: '#FFFFFF',
                 border: 'none',
-                borderRadius: '6px',
+                borderRadius: '8px',
                 cursor: 'pointer',
                 fontWeight: 600,
               }}

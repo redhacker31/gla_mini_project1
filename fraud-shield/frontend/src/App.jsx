@@ -157,11 +157,13 @@ export default function App() {
             {(pendingCount > 0 || flaggedCount > 0) && (
               <span
                 style={{
-                  background: 'rgba(245, 158, 11, 0.25)',
-                  color: '#fbbf24',
-                  padding: '0.05rem 0.45rem',
+                  background: activeTab === 'overview' ? 'rgba(255, 255, 255, 0.24)' : 'var(--tier-med-bg)',
+                  color: activeTab === 'overview' ? '#FFFFFF' : 'var(--tier-med)',
+                  border: activeTab === 'overview' ? 'none' : '1px solid var(--tier-med-border)',
+                  padding: '0.08rem 0.5rem',
                   borderRadius: '999px',
                   fontSize: '0.68rem',
+                  fontWeight: 700,
                 }}
               >
                 {pendingCount + flaggedCount} alerts
@@ -188,11 +190,13 @@ export default function App() {
             {selectedTxnForExplain && (
               <span
                 style={{
-                  background: 'rgba(6, 182, 212, 0.25)',
-                  color: '#67e8f9',
-                  padding: '0.05rem 0.45rem',
+                  background: activeTab === 'explain' ? 'rgba(255, 255, 255, 0.24)' : 'var(--accent-plum-tint)',
+                  color: activeTab === 'explain' ? '#FFFFFF' : 'var(--accent-plum)',
+                  border: activeTab === 'explain' ? 'none' : '1px solid var(--accent-plum-border)',
+                  padding: '0.08rem 0.5rem',
                   borderRadius: '999px',
                   fontSize: '0.68rem',
+                  fontWeight: 700,
                 }}
               >
                 Txn Loaded
@@ -309,31 +313,37 @@ export default function App() {
         />
       )}
 
-      {/* Toast Notification */}
+      {/* Warm High-Contrast Toast Notification */}
       {notification && (
         <div
           style={{
             position: 'fixed',
             bottom: '1.5rem',
             right: '1.5rem',
-            padding: '0.75rem 1.25rem',
-            borderRadius: '8px',
+            padding: '0.85rem 1.25rem',
+            borderRadius: '10px',
             background:
               notification.type === 'success'
-                ? '#064e3b'
+                ? '#ECFDF5'
                 : notification.type === 'error'
-                ? '#7f1d1d'
-                : '#1e293b',
+                ? '#FEF2F2'
+                : '#FFF1ED',
             border: `1px solid ${
               notification.type === 'success'
-                ? '#10b981'
+                ? '#A7F3D0'
                 : notification.type === 'error'
-                ? '#ef4444'
-                : '#3b82f6'
+                ? '#FECACA'
+                : '#FBC7BA'
             }`,
-            color: '#fff',
+            color:
+              notification.type === 'success'
+                ? '#059669'
+                : notification.type === 'error'
+                ? '#DC2626'
+                : '#D14628',
+            fontWeight: 600,
             fontSize: '0.825rem',
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)',
+            boxShadow: 'var(--shadow-md)',
             zIndex: 999,
             display: 'flex',
             alignItems: 'center',
@@ -354,11 +364,11 @@ export default function App() {
           textAlign: 'center',
           fontSize: '0.8rem',
           color: 'var(--text-muted)',
-          background: 'rgba(15, 23, 42, 0.5)',
+          background: 'var(--bg-secondary)',
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', maxWidth: '1380px', margin: '0 auto' }}>
-          <span><strong>Fraud Shield</strong> • Edge-Compatible Real-Time Anomaly Detection</span>
+          <span><strong style={{ color: 'var(--text-main)' }}>Fraud Shield</strong> • Edge-Compatible Real-Time Anomaly Detection</span>
           <span>B.Tech CSE AIML Capstone Project • GLA University • Team 40</span>
           <span>DPDP Act 2023 Compliant • Sub-50ms SLA Guaranteed</span>
         </div>
