@@ -8,7 +8,7 @@ Implements:
   - GET /transactions/audit/verify: Cryptographic hash-chain integrity verification
   - GET /transactions/audit/logs: Audit ledger inspection
 """
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -20,8 +20,9 @@ from app.schemas.transaction import (
     TransactionEvaluateRequest,
     TransactionEvaluateResponse,
 )
+from app.security.hmac_auth import require_privileged_auth
 from app.security.sanitization import sanitize_text
-from app.services.transaction_service import transaction_service
+from app.services.transaction_service import PersistenceError, transaction_service
 
 router = APIRouter()
 
@@ -47,6 +48,7 @@ class TransactionReviewRequest(BaseModel):
         200: {"description": "Transaction evaluated and persisted successfully."},
         400: {"description": "Invalid transaction data or business rule violation."},
         422: {"description": "Unprocessable entity / schema validation failure."},
+        503: {"description": "Database persistence failed; transaction rolled back."},
     },
 )
 async def evaluate_transaction(
@@ -61,6 +63,11 @@ async def evaluate_transaction(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(ve),
+        )
+    except PersistenceError as pe:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(pe),
         )
     except Exception as e:
         raise HTTPException(
@@ -185,6 +192,7 @@ async def review_transaction(
     txn_id: str,
     payload: TransactionReviewRequest,
     db: Session = Depends(get_db),
+    _auth: Dict[str, Any] = Depends(require_privileged_auth),
 ):
     """Execute manual analyst override/review for a transaction."""
     try:

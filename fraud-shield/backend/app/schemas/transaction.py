@@ -46,6 +46,11 @@ class TransactionEvaluateRequest(BaseModel):
         description="Transaction origination channel (UPI_APP, QR_SCAN, COLLECT_REQUEST, P2P_INTENT)",
         examples=["QR_SCAN"]
     )
+    device_id: Optional[str] = Field(
+        default=None,
+        description="Optional client device fingerprint identifier",
+        examples=["dev_android_102"],
+    )
 
     @field_validator("user_id")
     @classmethod
@@ -66,6 +71,14 @@ class TransactionEvaluateRequest(BaseModel):
     @classmethod
     def validate_channel(cls, v: str) -> str:
         return sanitize_text(v, field_name="channel", max_length=32, allow_empty=True)
+
+    @field_validator("device_id")
+    @classmethod
+    def validate_device_id(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        clean = sanitize_text(v, field_name="device_id", max_length=128, allow_empty=True)
+        return clean or None
 
     @field_validator("amount")
     @classmethod
@@ -93,6 +106,7 @@ class TransactionEvaluateResponse(BaseModel):
     recipient_vpa_masked: Optional[str] = Field(default=None, description="Masked destination VPA")
     timestamp: datetime
     channel: str
+    device_hash: Optional[str] = Field(default=None, description="Salted SHA-256 device fingerprint hash")
     status: str = Field(
         ...,
         description="Operational state: APPROVED, PENDING_VERIFICATION, or SECURITY_FLAGGED",
@@ -149,6 +163,7 @@ class TransactionDetail(BaseModel):
     recipient_vpa_masked: Optional[str] = None
     timestamp: datetime
     channel: str
+    device_hash: Optional[str] = Field(default=None, description="Salted SHA-256 device fingerprint hash")
     status: str
     risk_tier: str
     composite_score: float

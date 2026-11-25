@@ -45,6 +45,41 @@ class OTPService:
         self.ttl = settings.OTP_EXPIRY_SECONDS
         self.max_attempts = settings.OTP_MAX_ATTEMPTS
         self.resend_max = settings.OTP_RESEND_MAX
+        self._failed_attempts_cache: Dict[str, int] = {}
+
+    def get_recent_failed_attempts(self, user_hash: str) -> int:
+        """O(1) lookup of recent unverified/failed OTP attempts for hot-path risk scoring."""
+        return self._failed_attempts_cache.get(user_hash, 0)
+
+    def clear_failure_cache(self) -> None:
+        """Clear in-memory OTP failure counters (for test isolation)."""
+        self._failed_attempts_cache.clear()
+
+    def hydrate_failure_counts(self, db=None, hours: int = 24) -> int:
+        """Hydrate 24h failed/locked OTP counts per user_hash from SQLite on startup."""
+        from sqlalchemy import func, select
+        from app.database.session import get_db_context
+
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+
+        def _load(session) -> Dict[str, int]:
+            stmt = (
+                select(OTPSession.user_hash, func.coalesce(func.sum(OTPSession.attempts), 0))
+                .where(OTPSession.status != "VERIFIED", OTPSession.created_at >= cutoff)
+                .group_by(OTPSession.user_hash)
+            )
+            return {u_hash: int(cnt) for u_hash, cnt in session.execute(stmt).all() if cnt > 0}
+
+        try:
+            if db is not None:
+                self._failed_attempts_cache = _load(db)
+            else:
+                with get_db_context() as session:
+                    self._failed_attempts_cache = _load(session)
+            return len(self._failed_attempts_cache)
+        except Exception as exc:
+            logger.warning("Failed to hydrate OTP failure cache: %s", exc)
+            return 0
 
     def is_active(self) -> bool:
         """Service health indicator."""
@@ -59,6 +94,7 @@ class OTPService:
         recipient_vpa: str,
         phone: Optional[str] = None,
         custom_session_id: Optional[str] = None,
+        auto_commit: bool = True,
     ) -> Tuple[OTPSession, str]:
         """Generate CSPRNG OTP challenge session, persist hash, and dispatch via SMS gateway."""
         session_id = custom_session_id or f"otp_sess_{uuid.uuid4().hex[:16]}"
@@ -69,39 +105,43 @@ class OTPService:
         expires_at = now + timedelta(seconds=settings.OTP_EXPIRY_SECONDS)
         target_phone = phone or "+91 98765 43210"
 
-        # 1. Create and persist OTPSession
-        otp_session = OTPSession(
-            session_id=session_id,
-            txn_id=txn_id,
-            user_hash=user_hash,
-            otp_hash=otp_digest,
-            attempts=0,
-            max_attempts=settings.OTP_MAX_ATTEMPTS,
-            resends_used=0,
-            phone_masked=sms_gateway._mask_phone(target_phone),
-            status="ACTIVE",
-            expires_at=expires_at,
-            created_at=now,
-        )
-        otp_repo.create(db, otp_session)
+        with audit_repo.chain_lock:
+            # 1. Create and persist OTPSession
+            otp_session = OTPSession(
+                session_id=session_id,
+                txn_id=txn_id,
+                user_hash=user_hash,
+                otp_hash=otp_digest,
+                attempts=0,
+                max_attempts=settings.OTP_MAX_ATTEMPTS,
+                resends_used=0,
+                phone_masked=sms_gateway._mask_phone(target_phone),
+                status="ACTIVE",
+                expires_at=expires_at,
+                created_at=now,
+            )
+            otp_repo.create(db, otp_session)
 
-        # 2. Append audit ledger entry
-        audit_repo.append_log(
-            db=db,
-            entity_type="OTP_SESSION",
-            entity_id=session_id,
-            action="CHALLENGE_CREATED",
-            actor="RISK_ENGINE",
-            details={
-                "txn_id": txn_id,
-                "user_hash": user_hash,
-                "ttl_seconds": settings.OTP_EXPIRY_SECONDS,
-                "max_attempts": settings.OTP_MAX_ATTEMPTS,
-            },
-            timestamp=now,
-        )
+            # 2. Append audit ledger entry
+            audit_repo.append_log(
+                db=db,
+                entity_type="OTP_SESSION",
+                entity_id=session_id,
+                action="CHALLENGE_CREATED",
+                actor="RISK_ENGINE",
+                details={
+                    "txn_id": txn_id,
+                    "user_hash": user_hash,
+                    "ttl_seconds": settings.OTP_EXPIRY_SECONDS,
+                    "max_attempts": settings.OTP_MAX_ATTEMPTS,
+                },
+                timestamp=now,
+            )
 
-        # 3. Dispatch out-of-band SMS
+            if auto_commit:
+                db.commit()
+
+        # 3. Dispatch out-of-band SMS after persistence succeeds
         sms_gateway.send_otp_sms(
             phone=target_phone,
             otp=raw_otp,
@@ -110,7 +150,6 @@ class OTPService:
             session_id=session_id,
         )
 
-        db.commit()
         return otp_session, raw_otp
 
     def verify_otp(
@@ -120,6 +159,15 @@ class OTPService:
         candidate_otp: str,
     ) -> Dict[str, Any]:
         """Validate candidate OTP against stored hash with attempt limiting and state promotion."""
+        with audit_repo.chain_lock:
+            return self._verify_otp_locked(db=db, session_id=session_id, candidate_otp=candidate_otp)
+
+    def _verify_otp_locked(
+        self,
+        db: Session,
+        session_id: str,
+        candidate_otp: str,
+    ) -> Dict[str, Any]:
         session = otp_repo.get_by_id(db, session_id)
         if not session:
             return {
@@ -211,6 +259,7 @@ class OTPService:
             )
 
             db.commit()
+            self._failed_attempts_cache.pop(session.user_hash, None)
             return {
                 "success": True,
                 "status": "APPROVED",
@@ -221,6 +270,9 @@ class OTPService:
             }
 
         else:
+            self._failed_attempts_cache[session.user_hash] = (
+                self._failed_attempts_cache.get(session.user_hash, 0) + 1
+            )
             # Check for lockout threshold
             remaining = session.max_attempts - session.attempts
             if remaining <= 0:
@@ -279,36 +331,52 @@ class OTPService:
 
     def resend_otp(self, db: Session, session_id: str) -> Dict[str, Any]:
         """Regenerate and redispatch Step-Up OTP with rate-limiting quota enforcement."""
-        session = otp_repo.get_by_id(db, session_id)
-        if not session:
-            return {
-                "success": False,
-                "message": f"Verification session '{session_id}' not found.",
-            }
+        with audit_repo.chain_lock:
+            session = otp_repo.get_by_id(db, session_id)
+            if not session:
+                return {
+                    "success": False,
+                    "message": f"Verification session '{session_id}' not found.",
+                }
 
-        if session.status != "ACTIVE":
-            return {
-                "success": False,
-                "message": f"Cannot resend OTP: session is in '{session.status}' state.",
-            }
+            if session.status != "ACTIVE":
+                return {
+                    "success": False,
+                    "message": f"Cannot resend OTP: session is in '{session.status}' state.",
+                }
 
-        if session.resends_used >= settings.OTP_RESEND_MAX:
-            return {
-                "success": False,
-                "session_id": session_id,
-                "resends_remaining": 0,
-                "message": f"Maximum OTP resend limit ({settings.OTP_RESEND_MAX}) reached.",
-            }
+            if session.resends_used >= settings.OTP_RESEND_MAX:
+                return {
+                    "success": False,
+                    "session_id": session_id,
+                    "resends_remaining": 0,
+                    "message": f"Maximum OTP resend limit ({settings.OTP_RESEND_MAX}) reached.",
+                }
 
-        # Generate fresh OTP
-        raw_otp = generate_csprng_otp(length=6)
-        session.otp_hash = hash_otp(raw_otp)
-        session.resends_used += 1
+            # Generate fresh OTP
+            raw_otp = generate_csprng_otp(length=6)
+            session.otp_hash = hash_otp(raw_otp)
+            session.resends_used += 1
 
-        now = datetime.now(timezone.utc)
-        session.expires_at = now + timedelta(seconds=settings.OTP_EXPIRY_SECONDS)
+            now = datetime.now(timezone.utc)
+            session.expires_at = now + timedelta(seconds=settings.OTP_EXPIRY_SECONDS)
 
-        # Dispatch via SMS Gateway
+            audit_repo.append_log(
+                db=db,
+                entity_type="OTP_SESSION",
+                entity_id=session_id,
+                action="OTP_RESENT",
+                actor="USER",
+                details={
+                    "resends_used": session.resends_used,
+                    "resends_remaining": settings.OTP_RESEND_MAX - session.resends_used,
+                },
+                timestamp=now,
+            )
+
+            db.commit()
+
+        # Dispatch via SMS Gateway after DB commit succeeds
         txn = session.transaction
         amount = txn.amount if txn else 0.0
         vpa = txn.recipient_vpa_masked if txn else "merchant@upi"
@@ -321,21 +389,6 @@ class OTPService:
             recipient_vpa=vpa,
             session_id=session_id,
         )
-
-        audit_repo.append_log(
-            db=db,
-            entity_type="OTP_SESSION",
-            entity_id=session_id,
-            action="OTP_RESENT",
-            actor="USER",
-            details={
-                "resends_used": session.resends_used,
-                "resends_remaining": settings.OTP_RESEND_MAX - session.resends_used,
-            },
-            timestamp=now,
-        )
-
-        db.commit()
         return {
             "success": True,
             "session_id": session_id,

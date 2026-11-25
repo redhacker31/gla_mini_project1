@@ -17,6 +17,7 @@ from app.repositories.audit_repo import audit_repo
 from app.security.hmac_auth import (
     generate_gateway_signature,
     require_gateway_signature,
+    require_privileged_auth,
     verify_signature,
 )
 from app.security.rate_limiter import rate_limiter
@@ -149,6 +150,7 @@ async def get_blacklist_and_policy():
 async def add_blacklist_vpa(
     payload: BlacklistVpaRequest,
     db: Session = Depends(get_db),
+    _auth: Dict[str, Any] = Depends(require_privileged_auth),
 ):
     """Register a VPA in the live blacklist."""
     try:
@@ -158,18 +160,24 @@ async def add_blacklist_vpa(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
     already_present = clean_vpa in risk_engine_service.blacklist
-    risk_engine_service.add_to_blacklist(clean_vpa)
-
     if not already_present:
-        audit_repo.append_log(
-            db=db,
-            entity_type="SECURITY_POLICY",
-            entity_id=clean_vpa,
-            action="BLACKLIST_ADDED",
-            actor="ANALYST",
-            details={"vpa": clean_vpa, "reason": clean_reason or "Added via Security Console"},
-        )
-        db.commit()
+        with audit_repo.chain_lock:
+            risk_engine_service.add_to_blacklist(
+                clean_vpa,
+                reason=clean_reason or "Added via Security Console",
+                added_by="ANALYST",
+                persist=True,
+                db=db,
+            )
+            audit_repo.append_log(
+                db=db,
+                entity_type="SECURITY_POLICY",
+                entity_id=clean_vpa,
+                action="BLACKLIST_ADDED",
+                actor="ANALYST",
+                details={"vpa": clean_vpa, "reason": clean_reason or "Added via Security Console"},
+            )
+            db.commit()
 
     return {
         "status": "success",
@@ -187,6 +195,7 @@ async def add_blacklist_vpa(
 async def remove_blacklist_vpa(
     vpa: str,
     db: Session = Depends(get_db),
+    _auth: Dict[str, Any] = Depends(require_privileged_auth),
 ):
     """Remove a VPA from the live blacklist."""
     clean_vpa = vpa.strip().lower()
@@ -196,16 +205,17 @@ async def remove_blacklist_vpa(
             detail=f"VPA '{clean_vpa}' is not present in the active blacklist.",
         )
 
-    risk_engine_service.remove_from_blacklist(clean_vpa)
-    audit_repo.append_log(
-        db=db,
-        entity_type="SECURITY_POLICY",
-        entity_id=clean_vpa,
-        action="BLACKLIST_REMOVED",
-        actor="ANALYST",
-        details={"vpa": clean_vpa},
-    )
-    db.commit()
+    with audit_repo.chain_lock:
+        risk_engine_service.remove_from_blacklist(clean_vpa, persist=True, db=db)
+        audit_repo.append_log(
+            db=db,
+            entity_type="SECURITY_POLICY",
+            entity_id=clean_vpa,
+            action="BLACKLIST_REMOVED",
+            actor="ANALYST",
+            details={"vpa": clean_vpa},
+        )
+        db.commit()
 
     return {
         "status": "success",
@@ -222,6 +232,7 @@ async def remove_blacklist_vpa(
 async def update_risk_thresholds(
     payload: ThresholdUpdateRequest,
     db: Session = Depends(get_db),
+    _auth: Dict[str, Any] = Depends(require_privileged_auth),
 ):
     """Dynamically adjust 3-tier composite risk thresholds."""
     if payload.threshold_low >= payload.threshold_high - 0.05:
@@ -232,23 +243,28 @@ async def update_risk_thresholds(
 
     old_low = risk_engine_service.threshold_low
     old_high = risk_engine_service.threshold_high
-    risk_engine_service.threshold_low = round(payload.threshold_low, 2)
-    risk_engine_service.threshold_high = round(payload.threshold_high, 2)
 
-    audit_repo.append_log(
-        db=db,
-        entity_type="SECURITY_POLICY",
-        entity_id="RISK_THRESHOLDS",
-        action="POLICY_UPDATED",
-        actor="ANALYST",
-        details={
-            "old_low": old_low,
-            "new_low": risk_engine_service.threshold_low,
-            "old_high": old_high,
-            "new_high": risk_engine_service.threshold_high,
-        },
-    )
-    db.commit()
+    with audit_repo.chain_lock:
+        risk_engine_service.update_thresholds(
+            payload.threshold_low,
+            payload.threshold_high,
+            persist=True,
+            db=db,
+        )
+        audit_repo.append_log(
+            db=db,
+            entity_type="SECURITY_POLICY",
+            entity_id="RISK_THRESHOLDS",
+            action="POLICY_UPDATED",
+            actor="ANALYST",
+            details={
+                "old_low": old_low,
+                "new_low": risk_engine_service.threshold_low,
+                "old_high": old_high,
+                "new_high": risk_engine_service.threshold_high,
+            },
+        )
+        db.commit()
 
     return {
         "status": "success",

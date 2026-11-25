@@ -3,6 +3,13 @@
  * Connects the React dashboard to the FastAPI backend gateway.
  */
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
+const ADMIN_API_KEY = import.meta.env.VITE_ADMIN_API_KEY || 'fraud-shield-local-admin-key-2026';
+
+function privilegedHeaders() {
+  return {
+    'X-Admin-Key': ADMIN_API_KEY,
+  };
+}
 
 /**
  * Helper to execute fetch requests with json handling and error propagation
@@ -110,6 +117,7 @@ export async function fetchTransaction(txnId) {
 export async function reviewTransaction(txnId, decision, analystNote = '', blacklistRecipient = false) {
   return await apiRequest(`/transactions/${encodeURIComponent(txnId)}/review`, {
     method: 'POST',
+    headers: privilegedHeaders(),
     body: JSON.stringify({
       decision,
       analyst_note: analystNote,
@@ -304,6 +312,7 @@ export async function fetchBlacklistAndPolicy() {
 export async function addBlacklistVpa(vpa, reason = 'Added via Security Console') {
   return await apiRequest('/system/security/blacklist', {
     method: 'POST',
+    headers: privilegedHeaders(),
     body: JSON.stringify({ vpa, reason }),
   });
 }
@@ -314,6 +323,7 @@ export async function addBlacklistVpa(vpa, reason = 'Added via Security Console'
 export async function removeBlacklistVpa(vpa) {
   return await apiRequest(`/system/security/blacklist/${encodeURIComponent(vpa)}`, {
     method: 'DELETE',
+    headers: privilegedHeaders(),
   });
 }
 
@@ -323,6 +333,7 @@ export async function removeBlacklistVpa(vpa) {
 export async function updateRiskThresholds(thresholdLow, thresholdHigh) {
   return await apiRequest('/system/security/thresholds', {
     method: 'PATCH',
+    headers: privilegedHeaders(),
     body: JSON.stringify({
       threshold_low: thresholdLow,
       threshold_high: thresholdHigh,

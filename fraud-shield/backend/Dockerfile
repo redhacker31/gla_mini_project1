@@ -74,5 +74,6 @@ EXPOSE 8000
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Launch ASGI production server with 2 worker processes
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--access-log"]
+# Launch ASGI production server with single worker so in-memory sliding windows,
+# OTP sandbox state, rate limiter, and SQLite WAL stay strongly consistent.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--access-log"]

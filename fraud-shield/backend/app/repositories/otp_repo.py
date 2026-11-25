@@ -1,7 +1,7 @@
 """OTP Session Repository."""
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.otp_session import OTPSession
@@ -55,6 +55,21 @@ class OTPSessionRepository:
             db.flush()
             return True
         return False
+
+    @staticmethod
+    def count_recent_failed_attempts(
+        db: Session,
+        user_hash: str,
+        hours: int = 24,
+    ) -> int:
+        """Count total failed OTP attempts across recent unverified/locked sessions for a user."""
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+        stmt = select(func.coalesce(func.sum(OTPSession.attempts), 0)).where(
+            OTPSession.user_hash == user_hash,
+            OTPSession.status != "VERIFIED",
+            OTPSession.created_at >= cutoff,
+        )
+        return int(db.scalar(stmt) or 0)
 
 
 otp_repo = OTPSessionRepository()

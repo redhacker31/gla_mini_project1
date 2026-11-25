@@ -16,11 +16,13 @@ from typing import Any, Dict, List, Optional
 import uuid
 
 from sqlalchemy.orm import Session
+import numpy as np
 
 from app.database.session import get_db_context
 from app.models.risk_assessment import RiskAssessment
 from app.models.transaction import Transaction
 from app.repositories.audit_repo import audit_repo
+from app.repositories.otp_repo import otp_repo
 from app.repositories.transaction_repo import transaction_repo
 from app.repositories.user_repo import user_repo
 from app.schemas.transaction import (
@@ -35,6 +37,10 @@ from app.services.feature_engineering import feature_service
 from app.services.risk_engine import risk_engine_service
 
 logger = logging.getLogger(__name__)
+
+
+class PersistenceError(RuntimeError):
+    """Raised when persistent database or audit logging fails during transaction evaluation."""
 
 
 class TransactionService:
@@ -61,6 +67,10 @@ class TransactionService:
         t_start = time.perf_counter()
         txn_id = str(uuid.uuid4())
         txn_timestamp = request.timestamp or datetime.now(timezone.utc)
+        user_hash = hash_identifier(request.user_id)
+        masked_vpa_str = mask_vpa(request.recipient_vpa)
+        raw_device_id = getattr(request, "device_id", None)
+        device_hash = hash_identifier(raw_device_id) if raw_device_id else None
 
         # 1. Behavioral Feature Extraction (<10ms SLA)
         features = feature_service.extract_features(
@@ -68,23 +78,26 @@ class TransactionService:
             amount=request.amount,
             timestamp=txn_timestamp,
             recipient_vpa=request.recipient_vpa,
+            device_hash=device_hash,
         )
-        feature_vector = feature_service.extract_feature_vector(
-            user_id=request.user_id,
-            amount=request.amount,
-            timestamp=txn_timestamp,
-            recipient_vpa=request.recipient_vpa,
+        feature_vector = np.array(
+            [features[col] for col in feature_service.FEATURE_COLUMNS],
+            dtype=np.float32,
         )
 
         # 2. ML Anomaly Detection (<15ms SLA)
         ml_score = anomaly_detector_service.predict_anomaly_score(feature_vector)
+
+        # 2b. Historical 24h Failed OTP Attempts Lookup (O(1) cached)
+        from app.services.otp_service import otp_service
+        failed_otp_attempts = otp_service.get_recent_failed_attempts(user_hash)
 
         # 3. Composite Risk Engine Decision (<5ms SLA)
         decision = risk_engine_service.evaluate(
             ml_score=ml_score,
             features=features,
             recipient_vpa=request.recipient_vpa,
-            failed_otp_attempts=0,
+            failed_otp_attempts=failed_otp_attempts,
         )
 
         # 4. Map Operational Status & Lifecycle Action
@@ -97,14 +110,6 @@ class TransactionService:
             session_id = f"otp_sess_{uuid.uuid4().hex[:16]}"
         else:  # FREEZE_REVIEW
             status = "SECURITY_FLAGGED"
-
-        # Record transaction attempt into sliding-window buffer for anti-evasion
-        feature_service.commit_transaction(
-            user_id=request.user_id,
-            amount=request.amount,
-            timestamp=txn_timestamp,
-            recipient_vpa=request.recipient_vpa,
-        )
 
         total_latency_ms = (time.perf_counter() - t_start) * 1000.0
 
@@ -120,9 +125,6 @@ class TransactionService:
             for r in decision.triggered_rules
         ]
 
-        user_hash = hash_identifier(request.user_id)
-        masked_vpa_str = mask_vpa(request.recipient_vpa)
-
         response = TransactionEvaluateResponse(
             txn_id=txn_id,
             user_id=request.user_id,
@@ -132,6 +134,7 @@ class TransactionService:
             recipient_vpa_masked=masked_vpa_str,
             timestamp=txn_timestamp,
             channel=request.channel,
+            device_hash=device_hash,
             status=status,
             risk_tier=decision.risk_tier,
             composite_score=decision.composite_score,
@@ -143,7 +146,26 @@ class TransactionService:
             latency_ms=round(total_latency_ms, 3),
         )
 
-        # In-memory registration with dual format support
+        # 5. Database Persistence & Tamper-Evident Audit Logging (atomic; raises on failure)
+        self._persist_evaluation(
+            request=request,
+            response=response,
+            decision=decision,
+            features=features,
+            rule_infos=rule_infos,
+            db=db,
+        )
+
+        # 6. Only update sliding-window & cache after persistent commit succeeds
+        feature_service.commit_transaction(
+            user_id=request.user_id,
+            amount=request.amount,
+            timestamp=txn_timestamp,
+            recipient_vpa=request.recipient_vpa,
+            device_hash=device_hash,
+            is_flagged=(decision.risk_tier == "HIGH"),
+        )
+
         record = response.model_dump()
         record["created_at"] = txn_timestamp.isoformat()
         record["risk_assessment"] = {
@@ -160,16 +182,6 @@ class TransactionService:
         if len(self._chronological_txn_ids) > self.MAX_CACHE_SIZE:
             oldest_id = self._chronological_txn_ids.pop(0)
             self._transactions.pop(oldest_id, None)
-
-        # 5. Database Persistence & Tamper-Evident Audit Logging (Phase 7)
-        self._persist_evaluation(
-            request=request,
-            response=response,
-            decision=decision,
-            features=features,
-            rule_infos=rule_infos,
-            db=db,
-        )
 
         return response
 
@@ -202,6 +214,7 @@ class TransactionService:
                 recipient_vpa_masked=masked_vpa_str,
                 merchant_category=merchant_cat,
                 channel=response.channel,
+                device_hash=response.device_hash,
                 status=response.status,
                 session_id=response.session_id,
                 created_at=response.timestamp,
@@ -252,18 +265,26 @@ class TransactionService:
                     amount=response.amount,
                     recipient_vpa=response.recipient_vpa,
                     custom_session_id=response.session_id,
+                    auto_commit=False,
                 )
 
             session.commit()
 
-        try:
-            if db is not None:
-                _execute_write(db)
-            else:
-                with get_db_context() as session:
-                    _execute_write(session)
-        except Exception as exc:
-            logger.error("Failed to persist transaction evaluation: %s", exc, exc_info=True)
+        with audit_repo.chain_lock:
+            try:
+                if db is not None:
+                    _execute_write(db)
+                else:
+                    with get_db_context() as session:
+                        _execute_write(session)
+            except Exception as exc:
+                if db is not None:
+                    try:
+                        db.rollback()
+                    except Exception:
+                        pass
+                logger.error("Failed to persist transaction evaluation: %s", exc, exc_info=True)
+                raise PersistenceError(f"Transaction persistence failed: {exc}") from exc
 
     def get_transaction(self, txn_id: str, db: Optional[Session] = None) -> Optional[Dict]:
         """Retrieve evaluated transaction by ID from memory or database."""
@@ -377,14 +398,20 @@ class TransactionService:
                 session.commit()
             return ok
 
-        try:
-            if db is not None:
-                updated = _do_update(db) or updated
-            else:
-                with get_db_context() as session:
-                    updated = _do_update(session) or updated
-        except Exception as exc:
-            logger.error("Failed to update transaction status in database: %s", exc)
+        with audit_repo.chain_lock:
+            try:
+                if db is not None:
+                    updated = _do_update(db) or updated
+                else:
+                    with get_db_context() as session:
+                        updated = _do_update(session) or updated
+            except Exception as exc:
+                if db is not None:
+                    try:
+                        db.rollback()
+                    except Exception:
+                        pass
+                logger.error("Failed to update transaction status in database: %s", exc)
 
         return updated
 
@@ -418,7 +445,13 @@ class TransactionService:
                 cached = self._transactions.get(txn_id)
                 candidate_vpa = (cached.get("recipient_vpa") if cached else None) or txn.recipient_vpa_masked
                 if candidate_vpa and "*" not in candidate_vpa and "@" in candidate_vpa:
-                    risk_engine_service.add_to_blacklist(candidate_vpa)
+                    risk_engine_service.add_to_blacklist(
+                        candidate_vpa,
+                        reason=analyst_note or "Flagged during analyst review",
+                        added_by="ANALYST",
+                        persist=True,
+                        db=session,
+                    )
                     blacklisted_vpa = candidate_vpa.strip().lower()
                     audit_repo.append_log(
                         db=session,
@@ -455,15 +488,22 @@ class TransactionService:
                 "blacklisted_vpa": blacklisted_vpa,
             }
 
-        if db is not None:
-            return _do_review(db)
-        with get_db_context() as session:
-            return _do_review(session)
+        with audit_repo.chain_lock:
+            if db is not None:
+                return _do_review(db)
+            with get_db_context() as session:
+                return _do_review(session)
 
     def clear_records(self):
         """Reset internal storage and clear database tables (for test suite hygiene)."""
         self._transactions.clear()
         self._chronological_txn_ids.clear()
+        feature_service.clear_all()
+        try:
+            from app.services.otp_service import otp_service
+            otp_service.clear_failure_cache()
+        except Exception:
+            pass
         try:
             from app.database.session import engine
             from sqlalchemy import text
@@ -490,6 +530,7 @@ class TransactionService:
             "timestamp": txn.created_at.isoformat() if txn.created_at else None,
             "created_at": txn.created_at.isoformat() if txn.created_at else None,
             "channel": txn.channel,
+            "device_hash": getattr(txn, "device_hash", None),
             "status": txn.status,
             "session_id": txn.session_id,
         }

@@ -3,6 +3,7 @@
 Real-Time Anomaly Detection for Digital Micro-Transactions.
 B.Tech AIML Capstone Project.
 """
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,20 +11,38 @@ from app.config import settings
 from app.api import api_router
 from app.database import init_db
 from app.services.anomaly_detector import anomaly_detector_service
+from app.services.feature_engineering import feature_service
+from app.services.otp_service import otp_service
+from app.services.risk_engine import risk_engine_service
 from app.security.security_headers import SecurityHeadersMiddleware
 from app.security.rate_limiter import RateLimiterMiddleware
+
+
+def _bootstrap_runtime() -> None:
+    """Initialize DB schema, migrations, persisted policies, and in-memory state."""
+    env_name = settings.ENVIRONMENT.strip().lower()
+    if env_name not in ("development", "test") and settings.has_insecure_default_secrets():
+        logging.getLogger(__name__).warning(
+            "SECURITY WARNING: Default academic SECRET_KEY/HMAC_SECRET_KEY/ADMIN_API_KEY in use under ENVIRONMENT='%s'. Override via environment variables before production deployment.",
+            settings.ENVIRONMENT,
+        )
+    init_db()
+    risk_engine_service.load_policies_from_db()
+    feature_service.hydrate_from_db()
+    otp_service.hydrate_failure_counts()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan context manager for startup and shutdown routines."""
-    # Initialize SQLite database schema
-    init_db()
+    _bootstrap_runtime()
     yield
 
 
 def create_application() -> FastAPI:
     """Factory function to build and configure the FastAPI application."""
+    # Ensure DB schema & migrations exist even when TestClient skips lifespan
+    init_db()
     application = FastAPI(
         title=settings.APP_NAME,
         version=settings.APP_VERSION,

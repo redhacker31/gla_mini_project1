@@ -1,8 +1,9 @@
 """Tamper-Evident Cryptographic Audit Ledger Repository."""
 from datetime import datetime, timezone
 import json
+import threading
 from typing import Any, Dict, List, Optional
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
 from app.models.audit_log import AuditLog
@@ -13,6 +14,9 @@ GENESIS_HASH = "GENESIS_FRAUD_SHIELD_V1_2026"
 
 class AuditRepository:
     """Operations for appending and validating the tamper-evident audit ledger."""
+
+    # Process-wide re-entrant lock serializing SHA-256 hash-chain reads, inserts, and commits
+    chain_lock: threading.RLock = threading.RLock()
 
     @staticmethod
     def append_log(
@@ -25,55 +29,108 @@ class AuditRepository:
         timestamp: Optional[datetime] = None,
     ) -> AuditLog:
         """Append a new record to the sequential cryptographic audit hash chain."""
-        # 1. Fetch record_hash of the latest record
-        last_hash_stmt = select(AuditLog.record_hash).order_by(desc(AuditLog.id)).limit(1)
-        prev_hash = db.scalar(last_hash_stmt) or GENESIS_HASH
+        with AuditRepository.chain_lock:
+            # 1. Fetch record_hash of the latest record
+            last_hash_stmt = select(AuditLog.record_hash).order_by(desc(AuditLog.id)).limit(1)
+            prev_hash = db.scalar(last_hash_stmt) or GENESIS_HASH
 
-        # 2. Canonical JSON serialization of details
-        ts = timestamp or datetime.now(timezone.utc)
-        ts_str = canonical_iso_timestamp(ts)
-        details_dict = details or {}
-        details_json = json.dumps(details_dict, sort_keys=True, separators=(",", ":"))
+            # 2. Canonical JSON serialization of details
+            ts = timestamp or datetime.now(timezone.utc)
+            ts_str = canonical_iso_timestamp(ts)
+            details_dict = details or {}
+            details_json = json.dumps(details_dict, sort_keys=True, separators=(",", ":"))
 
-        # 3. Calculate SHA-256 digest
-        record_hash = calculate_audit_hash(
-            prev_hash=prev_hash,
-            entity_type=entity_type,
-            entity_id=entity_id,
-            action=action,
-            timestamp_str=ts_str,
-            details_json=details_json,
-        )
+            # 3. Calculate SHA-256 digest
+            record_hash = calculate_audit_hash(
+                prev_hash=prev_hash,
+                entity_type=entity_type,
+                entity_id=entity_id,
+                action=action,
+                timestamp_str=ts_str,
+                details_json=details_json,
+            )
 
-        # 4. Construct and persist ledger entry
-        log_entry = AuditLog(
-            entity_type=entity_type,
-            entity_id=entity_id,
-            action=action,
-            actor=actor,
-            details_json=details_json,
-            prev_hash=prev_hash,
-            record_hash=record_hash,
-            timestamp=ts,
-        )
-        db.add(log_entry)
-        db.flush()
-        return log_entry
+            # 4. Construct and persist ledger entry
+            log_entry = AuditLog(
+                entity_type=entity_type,
+                entity_id=entity_id,
+                action=action,
+                actor=actor,
+                details_json=details_json,
+                prev_hash=prev_hash,
+                record_hash=record_hash,
+                timestamp=ts,
+            )
+            db.add(log_entry)
+            db.flush()
+            return log_entry
 
     @staticmethod
     def verify_chain_integrity(db: Session) -> Dict[str, Any]:
         """Verify complete sequential hash-chain integrity across all audit records.
 
+        Streams rows in batches of 500 (`yield_per`) to keep memory bounded.
         Validates both:
           1. Linkage: row[i].prev_hash == row[i-1].record_hash
           2. Content: row[i].record_hash == SHA256(row[i] contents)
-
-        Returns diagnostic verification report.
         """
         stmt = select(AuditLog).order_by(AuditLog.id.asc())
-        records = list(db.scalars(stmt).all())
+        result = db.scalars(stmt.execution_options(yield_per=500))
 
-        if not records:
+        expected_prev = GENESIS_HASH
+        idx = 0
+        try:
+            for rec in result:
+                # Check linkage to previous block
+                if rec.prev_hash != expected_prev:
+                    rec_id = rec.id
+                    found_prev = rec.prev_hash
+                    result.close()
+                    total_records = db.scalar(select(func.count(AuditLog.id))) or (idx + 1)
+                    return {
+                        "valid": False,
+                        "total_records": total_records,
+                        "records_verified": idx,
+                        "failed_record_id": rec_id,
+                        "index": idx,
+                        "reason": (
+                            f"Chain breakage at ID {rec_id}: expected prev_hash '{expected_prev}', "
+                            f"found '{found_prev}'."
+                        ),
+                    }
+
+                # Check content integrity hash
+                computed_hash = calculate_audit_hash(
+                    prev_hash=rec.prev_hash,
+                    entity_type=rec.entity_type,
+                    entity_id=rec.entity_id,
+                    action=rec.action,
+                    timestamp_str=canonical_iso_timestamp(rec.timestamp),
+                    details_json=rec.details_json,
+                )
+                if rec.record_hash != computed_hash:
+                    rec_id = rec.id
+                    stored_hash = rec.record_hash
+                    result.close()
+                    total_records = db.scalar(select(func.count(AuditLog.id))) or (idx + 1)
+                    return {
+                        "valid": False,
+                        "total_records": total_records,
+                        "records_verified": idx,
+                        "failed_record_id": rec_id,
+                        "index": idx,
+                        "reason": (
+                            f"Data tampering at ID {rec_id}: computed hash '{computed_hash}' "
+                            f"does not match stored record_hash '{stored_hash}'."
+                        ),
+                    }
+
+                expected_prev = rec.record_hash
+                idx += 1
+        finally:
+            result.close()
+
+        if idx == 0:
             return {
                 "valid": True,
                 "total_records": 0,
@@ -82,50 +139,10 @@ class AuditRepository:
                 "failed_record_id": None,
             }
 
-        expected_prev = GENESIS_HASH
-        for idx, rec in enumerate(records):
-            # Check linkage to previous block
-            if rec.prev_hash != expected_prev:
-                return {
-                    "valid": False,
-                    "total_records": len(records),
-                    "records_verified": idx,
-                    "failed_record_id": rec.id,
-                    "index": idx,
-                    "reason": (
-                        f"Chain breakage at ID {rec.id}: expected prev_hash '{expected_prev}', "
-                        f"found '{rec.prev_hash}'."
-                    ),
-                }
-
-            # Check content integrity hash
-            computed_hash = calculate_audit_hash(
-                prev_hash=rec.prev_hash,
-                entity_type=rec.entity_type,
-                entity_id=rec.entity_id,
-                action=rec.action,
-                timestamp_str=canonical_iso_timestamp(rec.timestamp),
-                details_json=rec.details_json,
-            )
-            if rec.record_hash != computed_hash:
-                return {
-                    "valid": False,
-                    "total_records": len(records),
-                    "records_verified": idx,
-                    "failed_record_id": rec.id,
-                    "index": idx,
-                    "reason": (
-                        f"Data tampering at ID {rec.id}: computed hash '{computed_hash}' "
-                        f"does not match stored record_hash '{rec.record_hash}'."
-                    ),
-                }
-
-            expected_prev = rec.record_hash
-
         return {
             "valid": True,
-            "total_records": len(records),
-            "records_verified": len(records),
+            "total_records": idx,
+            "records_verified": idx,
             "message": "Cryptographic audit chain fully verified. Zero tampering detected.",
             "head_hash": expected_prev,
             "failed_record_id": None,

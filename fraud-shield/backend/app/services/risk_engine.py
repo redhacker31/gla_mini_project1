@@ -5,10 +5,14 @@ into a calibrated Composite Risk Score S(x) in [0.0, 1.0].
 Enforces three operational risk tiers with human-interpretable explanations.
 """
 from dataclasses import asdict, dataclass
-from typing import Dict, List, Optional, Set, Tuple
+from datetime import datetime, timezone
+import logging
 import math
 import time
+from typing import Dict, List, Optional, Set, Tuple
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -65,13 +69,153 @@ class RiskEngineService:
         self.theta = theta
         self.blacklist = set(blacklist) if blacklist is not None else set(self.DEFAULT_BLACKLIST)
 
-    def add_to_blacklist(self, vpa: str):
-        """Register a new malicious VPA to the blacklist."""
-        self.blacklist.add(vpa.strip().lower())
+    def load_policies_from_db(self, db=None) -> None:
+        """Load persisted thresholds and blacklist VPAs from SQLite (seeding defaults on first run)."""
+        from sqlalchemy import select
+        from app.database.session import get_db_context
+        from app.models.security_policy import BlacklistEntry, SystemPolicy
+        from app.security.hashing import hash_identifier
 
-    def remove_from_blacklist(self, vpa: str):
-        """Remove a VPA from the blacklist."""
-        self.blacklist.discard(vpa.strip().lower())
+        def _load(session):
+            policy = session.get(SystemPolicy, 1)
+            if policy is None:
+                policy = SystemPolicy(
+                    id=1,
+                    threshold_low=settings.RISK_THRESHOLD_LOW,
+                    threshold_high=settings.RISK_THRESHOLD_HIGH,
+                )
+                session.add(policy)
+                # Seed initial blacklist only when system policy row is first created
+                for vpa in self.DEFAULT_BLACKLIST:
+                    clean_vpa = vpa.strip().lower()
+                    if not session.get(BlacklistEntry, clean_vpa):
+                        session.add(
+                            BlacklistEntry(
+                                vpa=clean_vpa,
+                                vpa_hash=hash_identifier(clean_vpa),
+                                reason="Initial syndicate threat feed",
+                                added_by="SYSTEM",
+                            )
+                        )
+                session.commit()
+
+            self.threshold_low = float(policy.threshold_low)
+            self.threshold_high = float(policy.threshold_high)
+            entries = list(session.scalars(select(BlacklistEntry.vpa)).all())
+            self.blacklist = {v.strip().lower() for v in entries if v}
+
+        try:
+            if db is not None:
+                _load(db)
+            else:
+                with get_db_context() as session:
+                    _load(session)
+        except Exception as exc:
+            logger.warning("Could not load persisted policies from SQLite (using defaults): %s", exc)
+
+    def add_to_blacklist(
+        self,
+        vpa: str,
+        reason: str = "Analyst threat registration",
+        added_by: str = "ANALYST",
+        persist: bool = True,
+        db=None,
+    ):
+        """Register a new malicious VPA to the blacklist (optionally persisted to SQLite)."""
+        clean_vpa = vpa.strip().lower()
+        self.blacklist.add(clean_vpa)
+        if not persist:
+            return
+
+        from app.database.session import get_db_context
+        from app.models.security_policy import BlacklistEntry
+        from app.security.hashing import hash_identifier
+
+        def _upsert(session):
+            if not session.get(BlacklistEntry, clean_vpa):
+                session.add(
+                    BlacklistEntry(
+                        vpa=clean_vpa,
+                        vpa_hash=hash_identifier(clean_vpa),
+                        reason=reason[:250],
+                        added_by=added_by,
+                    )
+                )
+                session.flush()
+
+        try:
+            if db is not None:
+                _upsert(db)
+            else:
+                with get_db_context() as session:
+                    _upsert(session)
+        except Exception as exc:
+            logger.warning("Blacklist DB upsert skipped: %s", exc)
+
+    def remove_from_blacklist(self, vpa: str, persist: bool = True, db=None):
+        """Remove a VPA from the blacklist (optionally persisted to SQLite)."""
+        clean_vpa = vpa.strip().lower()
+        self.blacklist.discard(clean_vpa)
+        if not persist:
+            return
+
+        from app.database.session import get_db_context
+        from app.models.security_policy import BlacklistEntry
+
+        def _delete(session):
+            entry = session.get(BlacklistEntry, clean_vpa)
+            if entry:
+                session.delete(entry)
+                session.flush()
+
+        try:
+            if db is not None:
+                _delete(db)
+            else:
+                with get_db_context() as session:
+                    _delete(session)
+        except Exception as exc:
+            logger.warning("Blacklist DB delete skipped: %s", exc)
+
+    def update_thresholds(
+        self,
+        threshold_low: float,
+        threshold_high: float,
+        persist: bool = True,
+        db=None,
+    ) -> None:
+        """Update operational risk tier boundaries in memory and persist to SQLite."""
+        self.threshold_low = round(float(threshold_low), 2)
+        self.threshold_high = round(float(threshold_high), 2)
+        if not persist:
+            return
+
+        from app.database.session import get_db_context
+        from app.models.security_policy import SystemPolicy
+
+        def _save(session):
+            policy = session.get(SystemPolicy, 1)
+            if policy is None:
+                policy = SystemPolicy(
+                    id=1,
+                    threshold_low=self.threshold_low,
+                    threshold_high=self.threshold_high,
+                )
+                session.add(policy)
+            else:
+                policy.threshold_low = self.threshold_low
+                policy.threshold_high = self.threshold_high
+                policy.updated_at = datetime.now(timezone.utc)
+            session.flush()
+
+        try:
+            if db is not None:
+                _save(db)
+            else:
+                with get_db_context() as session:
+                    _save(session)
+        except Exception as exc:
+            logger.warning("Threshold DB save skipped: %s", exc)
 
     def evaluate_rules(
         self,
@@ -171,6 +315,37 @@ class RiskEngineService:
                 severity="HIGH",
                 penalty=0.60,
                 reason=f"Account has recorded {failed_otp_attempts} consecutive prior authentication failures.",
+            ))
+
+        # Rule 7: New or Shared/Flagged Device Fingerprint
+        if float(features.get("is_shared_or_flagged_device", 0.0)) >= 1.0:
+            results.append(RuleResult(
+                rule_id="RULE_NEW_OR_SHARED_DEVICE",
+                rule_name="Shared or Flagged Device Fingerprint",
+                triggered=True,
+                severity="HIGH",
+                penalty=0.60,
+                reason="Transaction originated from a device linked to multiple accounts or previously flagged activity.",
+            ))
+        elif float(features.get("is_new_device", 0.0)) >= 1.0:
+            results.append(RuleResult(
+                rule_id="RULE_NEW_OR_SHARED_DEVICE",
+                rule_name="Unrecognized New Device",
+                triggered=True,
+                severity="MEDIUM",
+                penalty=0.45,
+                reason="Established account transacting from a previously unseen device fingerprint.",
+            ))
+
+        # Rule 8: Micro-Transaction Ceiling Enforcement (< INR 1,000 domain invariant)
+        if amount >= 1000.0:
+            results.append(RuleResult(
+                rule_id="RULE_MICRO_TXN_LIMIT_EXCEEDED",
+                rule_name="Micro-Transaction Ceiling Exceeded",
+                triggered=True,
+                severity="CRITICAL",
+                penalty=2.20,
+                reason=f"Transaction amount (INR {amount:.2f}) exceeds digital micro-transaction ceiling (< INR 1,000.00).",
             ))
 
         return results

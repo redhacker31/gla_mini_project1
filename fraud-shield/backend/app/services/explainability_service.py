@@ -189,6 +189,8 @@ class ExplainabilityService:
             ("RULE_BLACKLISTED_RECIPIENT", "Recipient on Fraud Blacklist", "CRITICAL", 2.50),
             ("RULE_AMOUNT_SPIKE", "Uncharacteristic Amount Spike", "MEDIUM", 0.40),
             ("RULE_REPEATED_AUTH_FAILURES", "Repeated OTP Failures on Account", "HIGH", 0.60),
+            ("RULE_NEW_OR_SHARED_DEVICE", "New or Shared/Flagged Device Fingerprint", "HIGH", 0.60),
+            ("RULE_MICRO_TXN_LIMIT_EXCEEDED", "Micro-Transaction Ceiling Exceeded", "CRITICAL", 2.20),
         ]
 
         attributions: List[RuleAttribution] = []

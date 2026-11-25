@@ -21,12 +21,7 @@ export default function Navbar({
 }) {
   const isChecking = !health || health?.status === 'checking';
   const isHealthy = health?.status === 'healthy';
-  const docsUrl =
-    typeof window !== 'undefined' &&
-    window.location.port === '5173' &&
-    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-      ? 'http://127.0.0.1:8000/docs'
-      : '/docs';
+  const docsUrl = '/docs';
 
   return (
     <header className="header">

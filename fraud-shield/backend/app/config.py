@@ -3,8 +3,12 @@
 Loads settings from environment variables and .env file with safe defaults.
 """
 from typing import List, Optional, Union
-from pydantic import AnyHttpUrl, field_validator
+from pydantic import AnyHttpUrl, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+DEFAULT_SECRET_KEY = "fraud-shield-academic-secret-key-change-in-production"
+DEFAULT_HMAC_SECRET_KEY = "fraud-shield-hmac-key-2026"
+DEFAULT_ADMIN_API_KEY = "fraud-shield-local-admin-key-2026"
 
 
 class Settings(BaseSettings):
@@ -18,8 +22,9 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
 
     # Security secrets & authentication
-    SECRET_KEY: str = "fraud-shield-academic-secret-key-change-in-production"
-    HMAC_SECRET_KEY: str = "fraud-shield-hmac-key-2026"
+    SECRET_KEY: str = DEFAULT_SECRET_KEY
+    HMAC_SECRET_KEY: str = DEFAULT_HMAC_SECRET_KEY
+    ADMIN_API_KEY: str = DEFAULT_ADMIN_API_KEY
     REPLAY_ATTACK_WINDOW_SECONDS: int = 300
 
     # Rate Limiting & Denial of Service Protection
@@ -43,7 +48,22 @@ class Settings(BaseSettings):
     OTP_EXPIRY_SECONDS: int = 180
     OTP_MAX_ATTEMPTS: int = 3
     OTP_RESEND_MAX: int = 2
-    ENABLE_SANDBOX_OTP_ENDPOINT: bool = True
+    ENABLE_SANDBOX_OTP_ENDPOINT: Optional[bool] = None
+
+    @model_validator(mode="after")
+    def _resolve_environment_defaults(self) -> "Settings":
+        """Disable sandbox OTP retrieval by default in production unless explicitly overridden."""
+        if self.ENABLE_SANDBOX_OTP_ENDPOINT is None:
+            self.ENABLE_SANDBOX_OTP_ENDPOINT = self.ENVIRONMENT.strip().lower() != "production"
+        return self
+
+    def has_insecure_default_secrets(self) -> bool:
+        """Return True if any security key still uses its built-in academic default."""
+        return (
+            self.SECRET_KEY == DEFAULT_SECRET_KEY
+            or self.HMAC_SECRET_KEY == DEFAULT_HMAC_SECRET_KEY
+            or self.ADMIN_API_KEY == DEFAULT_ADMIN_API_KEY
+        )
 
     # CORS settings
     BACKEND_CORS_ORIGINS: List[str] = [

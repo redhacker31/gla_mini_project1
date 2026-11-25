@@ -161,7 +161,11 @@ async def get_session_status(
 )
 async def get_latest_dispatched_otp(session_id: str):
     """Retrieve dispatched OTP for development testing and interactive UI simulation."""
-    if not settings.ENABLE_SANDBOX_OTP_ENDPOINT and (not settings.DEBUG and settings.ENVIRONMENT == "production"):
+    is_prod_locked = (
+        settings.ENABLE_SANDBOX_OTP_ENDPOINT is False
+        or (settings.ENABLE_SANDBOX_OTP_ENDPOINT is None and settings.ENVIRONMENT.strip().lower() == "production")
+    )
+    if is_prod_locked:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Sandbox OTP retrieval disabled in production environment.",

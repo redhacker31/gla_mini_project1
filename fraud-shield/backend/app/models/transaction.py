@@ -28,6 +28,7 @@ class Transaction(Base):
     recipient_vpa_masked: Mapped[str] = mapped_column(String(100), nullable=False)
     merchant_category: Mapped[str] = mapped_column(String(50), default="miscellaneous")
     channel: Mapped[str] = mapped_column(String(20), default="upi")
+    device_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
     status: Mapped[str] = mapped_column(
         String(30),
         default="APPROVED",

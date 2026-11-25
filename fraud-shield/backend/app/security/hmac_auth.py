@@ -89,3 +89,26 @@ async def require_gateway_signature(request: Request) -> Dict[str, Any]:
         "timestamp": ts,
         "signature": sig_header,
     }
+
+
+async def require_privileged_auth(request: Request) -> Dict[str, Any]:
+    """Enforce either HMAC-SHA256 gateway signature OR constant-time Admin API Key."""
+    sig_header = request.headers.get("X-Signature")
+    ts_header = request.headers.get("X-Timestamp")
+    admin_key = request.headers.get("X-Admin-Key")
+
+    if sig_header and ts_header:
+        return await require_gateway_signature(request)
+
+    if admin_key is not None:
+        if hmac.compare_digest(admin_key.strip(), settings.ADMIN_API_KEY):
+            return {"authenticated": True, "auth_method": "admin_key"}
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid 'X-Admin-Key' credential for privileged security operation.",
+        )
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Missing authentication headers: provide HMAC ('X-Signature', 'X-Timestamp') or 'X-Admin-Key'.",
+    )

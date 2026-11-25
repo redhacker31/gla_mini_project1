@@ -129,10 +129,13 @@ async def get_persisted_transaction_explanation(
         if recipient_vpa.lower().strip() not in risk_engine_service.blacklist_vpas:
             recipient_vpa = "blacklisted_mule99@upi"
 
+    from app.repositories.otp_repo import otp_repo
+    failed_otp_attempts = otp_repo.count_recent_failed_attempts(db, txn.user_hash, hours=24)
+
     report = explainability_service.explain(
         features=features,
         recipient_vpa=recipient_vpa,
-        failed_otp_attempts=0,
+        failed_otp_attempts=failed_otp_attempts,
         txn_id=txn.txn_id,
     )
     return report
